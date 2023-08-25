@@ -7,8 +7,8 @@ static void* xmalloc (size_t num) {
     void* new = NULL;
     int ret = posix_memalign(&new, 32, num);
     if (!new || ret) {
-        fprintf (stderr, "[PolyBench] posix_memalign: cannot allocate memory");
-        exit (1);
+        fprintf(stderr, "[PolyBench] posix_memalign: cannot allocate memory");
+        exit(1);
     }
     return new;
 }
@@ -20,7 +20,6 @@ void* polybench_alloc_data(unsigned long long int n, int elt_size) {
     void* ret = xmalloc(val);
     return ret;
 }
-
 
 /* Array initialization. */
 void init_array(int n, DATA_TYPE POLYBENCH_2D(A, N, N), DATA_TYPE POLYBENCH_2D(B, N, N)) {

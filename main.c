@@ -5,13 +5,17 @@
 
 #include <polybench.h>
 
-void jacobi_2d_serial(int tsteps, int dce);
-void jacobi_2d_parallel(int t, int dce);
+void jacobi_2d_serial(int t, int dce);
+void jacobi_2d_parallel(int t, int dce, int n_threads);
 
 const char *argp_program_version = "jacobi 2d computation 1.0";
 
 // Enum para as opções de tamanho da entrada
-enum dataset_size { SMALL, MEDIUM, LARGE };
+enum dataset_size {
+    SMALL = SMALL_DATASET,
+    MEDIUM = MEDIUM_DATASET,
+    LARGE = LARGE_DATASET
+};
 
 // Estrutura para armazenar os argumentos
 struct arguments {
@@ -32,19 +36,19 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state) {
     switch (key) {
         case 'd':
             if (strcmp(arg, "SMALL") == 0)
-                arguments->size = SMALL;
+                arguments->size = SMALL_DATASET;
             else if (strcmp(arg, "MEDIUM") == 0)
-                arguments->size = MEDIUM;
+                arguments->size = MEDIUM_DATASET;
             else if (strcmp(arg, "LARGE") == 0)
-                arguments->size = LARGE;
+                arguments->size = LARGE_DATASET;
             else
-                argp_error(state, "Tamanho inválido");
+                argp_error(state, "Invalid size option");
             break;
         case 't':
             arguments->threads = atoi(arg);
             break;
         case ARGP_KEY_ARG:
-            argp_error(state, "Argumento posicional não é suportado");
+            argp_error(state, "Positional argument is not supported");
             break;
         default:
             return ARGP_ERR_UNKNOWN;
@@ -54,7 +58,7 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state) {
 
 static char doc[] = "Application for analysis of Parallel Programming in the 2D Jacobi Computation Problem";
 
-static struct argp argp = { options, parse_opt, 0, doc, NULL, NULL };
+static struct argp argp = { options, parse_opt, 0, doc, NULL, NULL, NULL };
 
 int main(int argc, char *argv[]) {
     struct arguments arguments;
@@ -65,7 +69,7 @@ int main(int argc, char *argv[]) {
 
     argp_parse(&argp, argc, argv, 0, 0, &arguments);
 
-    jacobi_2d_parallel(arguments.size, 1);
+    jacobi_2d_parallel(arguments.size, 1, arguments.threads);
 
     return 0;
 }

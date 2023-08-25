@@ -20,7 +20,7 @@ void kernel_jacobi_2d_serial(int tsteps, DATA_TYPE POLYBENCH_2D(A, N, N), DATA_T
     }
 }
 
-void jacobi_2d_serial(int tsteps, int dce) {
+void jacobi_2d_serial(int t, int dce) {
   /* Variable declaration/allocation. */
   POLYBENCH_2D_ARRAY_DECL(A, DATA_TYPE, N, N);
   POLYBENCH_2D_ARRAY_DECL(B, DATA_TYPE, N, N);
@@ -33,7 +33,7 @@ void jacobi_2d_serial(int tsteps, int dce) {
 //   polybench_start_instruments;
 
   /* Run kernel. */
-  kernel_jacobi_2d_serial (tsteps, POLYBENCH_ARRAY(A), POLYBENCH_ARRAY(B));
+  kernel_jacobi_2d_serial (t, POLYBENCH_ARRAY(A), POLYBENCH_ARRAY(B));
 
   /* Stop and print timer. */
 //   polybench_stop_instruments;
