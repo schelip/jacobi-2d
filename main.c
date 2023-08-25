@@ -3,9 +3,12 @@
 #include <string.h>
 #include <argp.h>
 
-#include "polybench.h"
+#include <polybench.h>
 
-const char *argp_program_version = "program 1.0";
+void jacobi_2d_serial(int tsteps, int dce);
+void jacobi_2d_parallel(int t, int dce);
+
+const char *argp_program_version = "jacobi 2d computation 1.0";
 
 // Enum para as opções de tamanho da entrada
 enum dataset_size { SMALL, MEDIUM, LARGE };
@@ -51,19 +54,18 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state) {
 
 static char doc[] = "Application for analysis of Parallel Programming in the 2D Jacobi Computation Problem";
 
-static struct argp argp = { options, parse_opt, 0, doc };
+static struct argp argp = { options, parse_opt, 0, doc, NULL, NULL };
 
 int main(int argc, char *argv[]) {
     struct arguments arguments;
 
-    // Valores padrão para os argumentos
+    /* Default argument values */
     arguments.size = SMALL;
     arguments.threads = 1;
 
     argp_parse(&argp, argc, argv, 0, 0, &arguments);
 
-    // Exibe os valores dos argumentos
-    polybench(arguments.size, 1);
+    jacobi_2d_parallel(arguments.size, 1);
 
     return 0;
 }
