@@ -23,7 +23,7 @@ BIN_MAIN = $(BIN_DIR)/main
 all: $(BIN_MAIN)
 
 $(BIN_MAIN): $(OBJ_MAIN) $(OBJ_SERIAL) $(OBJ_PARALLEL) $(OBJ_POLYBENCH) | $(BIN_DIR)
-	$(CC) $(CFLAGS) $^ -o $@
+	$(CC) $(CFLAGS) $^ -o $@ -lm
 
 $(OBJ_DIR)/%.o: %.c | $(OBJ_DIR)
 	$(CC) $(CFLAGS) -I$(INC_DIR) -c $< -o $@

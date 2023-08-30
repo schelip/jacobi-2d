@@ -16,6 +16,9 @@ void* kernel_jacobi_2d_parallel(void* arg) {
     int t, i, j;
     int thread_id = *((int*)arg);
 
+    DATA_TYPE (*a)[N] = POLYBENCH_ARRAY(A);
+    DATA_TYPE (*b)[N] = POLYBENCH_ARRAY(B);
+
     if (DEBUG) fprintf(stdout, "[Thread %d] Created\n", thread_id);
 
     int start_row = 1 + thread_id * chunk_size;
@@ -26,8 +29,10 @@ void* kernel_jacobi_2d_parallel(void* arg) {
     for (t = 0; t < tsteps; t++) {
         if (DEBUG) fprintf(stdout, "[Thread %d] Started iteration %d\n", thread_id, t);
         for (i = start_row; i < end_row; i++)
-            for (j = 1; j < N - 1; j++)
-                *B[i][j] = 0.2 * (*A[i][j] + *A[i][j - 1] + *A[i][1 + j] + *A[1 + i][j] + *A[i - 1][j]);
+            for (j = 1; j < N - 1; j++) {
+                b[i][j] = 0.2 * (a[i][j] + a[i][j - 1] + a[i][1 + j] + a[1 + i][j] + a[i - 1][j]);
+                // if (DEBUG) printf("[Thread %d] Old: %f New: %f\n", thread_id, a[i][j], b[i][j]);
+            }
 
         if (DEBUG) fprintf(stdout, "[Thread %d] Finished computation\n", thread_id);
         pthread_barrier_wait(&barrier);
@@ -36,16 +41,16 @@ void* kernel_jacobi_2d_parallel(void* arg) {
 
         for (i = start_row; i < end_row; i++)
             for (j = 1; j < N - 1; j++)
-                *A[i][j] = *B[i][j];
+                a[i][j] = b[i][j];
         if (DEBUG) fprintf(stdout, "[Thread %d] Finished update\n", thread_id);
         pthread_barrier_wait(&barrier);
         if (DEBUG && thread_id == 0) fprintf(stdout, "(Iteration %d) All threads finished update\n", t);
         pthread_barrier_wait(&barrier);
 
-        // if (DEBUG) {
-        //     if (thread_id == 0) print_array(N, *A);
-        //     pthread_barrier_wait(&barrier);
-        // }
+        if (DEBUG) {
+            if (thread_id == 0) print_array(N, *A);
+            pthread_barrier_wait(&barrier);
+        }
     }
 
     return (void*)NULL;
@@ -67,6 +72,7 @@ void jacobi_2d_parallel(int t, int dce, int n_threads) {
 
     /* Initialize array(s). */
     init_array(N, POLYBENCH_ARRAY(A), POLYBENCH_ARRAY(B));
+    if (dce) print_array(N, POLYBENCH_ARRAY(A));
 
     /* Start timer. */
     //   polybench_start_instruments;
@@ -105,7 +111,7 @@ void jacobi_2d_parallel(int t, int dce, int n_threads) {
             exit(1);
         };
     }
-    free(threads);
+    // free(threads);
     
     if (DEBUG)
         fprintf(stdout, "All threads destroyed\n");

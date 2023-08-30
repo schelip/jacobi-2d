@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
 
 #include <polybench.h>
 
@@ -27,8 +28,8 @@ void init_array(int n, DATA_TYPE POLYBENCH_2D(A, N, N), DATA_TYPE POLYBENCH_2D(B
 
     for (i = 0; i < n; i++)
         for (j = 0; j < n; j++) {
-            A[i][j] = ((DATA_TYPE) i*(j+2) + 2) / n;
-            B[i][j] = ((DATA_TYPE) i*(j+3) + 3) / n;
+            A[i][j] = roundf((MAX_VALUE * ((DATA_TYPE)rand()) / RAND_MAX) * 100) / 100;
+            B[i][j] = A[i][j];
         }
 }
 

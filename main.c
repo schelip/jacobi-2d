@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <argp.h>
 
 #include <polybench.h>
@@ -10,26 +11,32 @@ void jacobi_2d_parallel(int t, int dce, int n_threads);
 
 const char *argp_program_version = "jacobi 2d computation 1.0";
 
-// Enum para as opções de tamanho da entrada
+/* Enumeration for the dataset size available options */
 enum dataset_size {
     SMALL = SMALL_DATASET,
     MEDIUM = MEDIUM_DATASET,
     LARGE = LARGE_DATASET
 };
 
-// Estrutura para armazenar os argumentos
+/* Used by main to communicate with parse_opt. */
 struct arguments {
     enum dataset_size size;
     int threads;
+    int seed;
 };
 
-// Opções de linha de comando
+/* Program documentation. */
+static char doc[] = "Application for analysis of Parallel Programming in the 2D Jacobi Computation Problem";
+
+/* The options we understand. */
 static struct argp_option options[] = {
-    { "size", 'd', "SIZE", 0, "Dataset size option (SMALL, MEDIUM, LARGE)", 0 },
-    { "threads", 't', "THREADS", 0, "Number of threads", 0 },
+    { "size", 'd', "SIZE", 0, "Dataset size option (SMALL, MEDIUM, LARGE) - defines the number of iterations for the computation", 0 },
+    { "threads", 't', "THREADS", 0, "Number of threads for the parallel computation", 0 },
+    { "seed", 's', "SEED", 0, "Seed for the array initialization", 0 },
     { 0 }
 };
 
+/* Parse a single option. */
 static error_t parse_opt(int key, char *arg, struct argp_state *state) {
     struct arguments *arguments = state->input;
 
@@ -47,6 +54,9 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state) {
         case 't':
             arguments->threads = atoi(arg);
             break;
+        case 's':
+            arguments->seed = atoi(arg);
+            break;
         case ARGP_KEY_ARG:
             argp_error(state, "Positional argument is not supported");
             break;
@@ -56,20 +66,25 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state) {
     return 0;
 }
 
-static char doc[] = "Application for analysis of Parallel Programming in the 2D Jacobi Computation Problem";
-
+/* Our argp parser. */
 static struct argp argp = { options, parse_opt, 0, doc, NULL, NULL, NULL };
 
 int main(int argc, char *argv[]) {
     struct arguments arguments;
 
-    /* Default argument values */
+    /* Default values */
     arguments.size = SMALL;
-    arguments.threads = 1;
+    arguments.threads = 2;
+    arguments.seed = 1;
 
+    /* Parse our arguments; every option seen by parse_opt will
+     be reflected in arguments. */
     argp_parse(&argp, argc, argv, 0, 0, &arguments);
 
-    jacobi_2d_parallel(arguments.size, 1, arguments.threads);
+    srand(arguments.seed);
 
-    return 0;
+    // jacobi_2d_parallel(arguments.size, 1, arguments.threads);
+    jacobi_2d_serial(arguments.size, 1);
+
+    exit(0);
 }

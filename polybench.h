@@ -1,15 +1,17 @@
 #ifndef POLYBENCH_H
 #define POLYBENCH_H
 
-#define N 19
+#define N 5
 #define SMALL_DATASET 5
 #define MEDIUM_DATASET 400
 #define LARGE_DATASET 600
 
+#define MAX_VALUE 15
+
 #define DATA_TYPE double
 #define DATA_PRINTF_MODIFIER "%0.2lf "
 
-#define DEBUG 1
+#define DEBUG 0
 
 #define POLYBENCH_PADDING_FACTOR 0
 #define POLYBENCH_2D(var, dim1, dim2) var[dim1 + POLYBENCH_PADDING_FACTOR][dim2 + POLYBENCH_PADDING_FACTOR]
