@@ -56,7 +56,7 @@ void* kernel_jacobi_2d_parallel(void* arg) {
     return (void*)NULL;
 }
 
-void jacobi_2d_parallel(int t, int dce, int n_threads) {
+void jacobi_2d_parallel(int t, int dce, int n_threads, int seed) {
     int i;
 
     tsteps = t;
@@ -69,7 +69,8 @@ void jacobi_2d_parallel(int t, int dce, int n_threads) {
     /* Variable declaration/allocation. */
     A = (DATA_TYPE(*)[N][N])polybench_alloc_data((N * N), sizeof(DATA_TYPE));
     B = (DATA_TYPE(*)[N][N])polybench_alloc_data((N * N), sizeof(DATA_TYPE));
-
+    
+    srand(seed);
     /* Initialize array(s). */
     init_array(N, POLYBENCH_ARRAY(A), POLYBENCH_ARRAY(B));
     if (dce) print_array(N, POLYBENCH_ARRAY(A));
@@ -125,7 +126,7 @@ void jacobi_2d_parallel(int t, int dce, int n_threads) {
     /* Prevent dead-code elimination. All live-out data must be printed
         by the function call in argument. */
     //   polybench_prevent_dce(print_array(n, POLYBENCH_ARRAY(A)));
-    if (dce) print_array(N, POLYBENCH_ARRAY(A));
+    //if (dce) print_array(N, POLYBENCH_ARRAY(A));
 
     /* Be clean. */
     POLYBENCH_FREE_ARRAY(A);

@@ -20,12 +20,12 @@ void kernel_jacobi_2d_serial(int tsteps, DATA_TYPE POLYBENCH_2D(A, N, N), DATA_T
     }
 }
 
-void jacobi_2d_serial(int t, int dce) {
+void jacobi_2d_serial(int t, int dce, int seed) {
   /* Variable declaration/allocation. */
   POLYBENCH_2D_ARRAY_DECL(A, DATA_TYPE, N, N);
   POLYBENCH_2D_ARRAY_DECL(B, DATA_TYPE, N, N);
 
-
+  srand(seed);
   /* Initialize array(s). */
   init_array (N, POLYBENCH_ARRAY(A), POLYBENCH_ARRAY(B));
 
