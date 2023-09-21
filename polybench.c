@@ -23,34 +23,34 @@ void* polybench_alloc_data(unsigned long long int n, int elt_size) {
 }
 
 /* Array initialization. */
-void init_array_with_copy(int n, DATA_TYPE POLYBENCH_2D(A, N, N), DATA_TYPE POLYBENCH_2D(B, N, N)) {
+void init_array_with_copy(int n, double A[N][N], double B[N][N]) {
     int i, j;
 
     for (i = 0; i < n; i++)
         for (j = 0; j < n; j++) {
-            A[i][j] = roundf((MAX_VALUE * ((DATA_TYPE)rand()) / RAND_MAX) * 100) / 100;
+            A[i][j] = roundf((MAX_VALUE * ((double)rand()) / RAND_MAX) * 100) / 100;
             B[i][j] = A[i][j];
         }
 }
 
 /* Array initialization. */
-void init_array(int n, DATA_TYPE POLYBENCH_2D(A, N, N)) {
+void init_array(int n, double A[N][N]) {
     int i, j;
 
     for (i = 0; i < n; i++)
         for (j = 0; j < n; j++) {
-            A[i][j] = roundf((MAX_VALUE * ((DATA_TYPE)rand()) / RAND_MAX) * 100) / 100;
+            A[i][j] = roundf((MAX_VALUE * ((double)rand()) / RAND_MAX) * 100) / 100;
         }
 }
 
 /* DCE code. Must scan the entire live-out data.
    Can be used also to check the correctness of the output. */
-void print_array(int n, DATA_TYPE POLYBENCH_2D(A, N, N)) {
+void print_array(int n, double A[N][N]) {
     int i, j;
 
     for (i = 0; i < n; i++) {
         for (j = 0; j < n; j++)
-            fprintf(stdout, DATA_PRINTF_MODIFIER, A[i][j]);
+            fprintf(stdout, "%0.2lf\t", A[i][j]);
         fprintf(stdout, "\n");  
     }
     fprintf(stdout, "\n");

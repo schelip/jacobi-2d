@@ -8,16 +8,12 @@
 pthread_barrier_t barrier;
 
 static int tsteps, num_threads, chunk_size;
-static DATA_TYPE POLYBENCH_2D(POLYBENCH_DECL_VAR(A), N, N);
-static DATA_TYPE POLYBENCH_2D(POLYBENCH_DECL_VAR(B), N, N);
+static double A[N][N], B[N][N];
 
     
 void* worker_pthread(void* arg) {
     int t, i, j;
     int thread_id = *((int*)arg);
-
-    DATA_TYPE (*a)[N] = POLYBENCH_ARRAY(A);
-    DATA_TYPE (*b)[N] = POLYBENCH_ARRAY(B);
 
     int start_row = 1 + thread_id * chunk_size;
     int end_row = (thread_id == num_threads - 1) ? (N - 1) : (start_row + chunk_size);
@@ -25,13 +21,13 @@ void* worker_pthread(void* arg) {
     for (t = 0; t < tsteps; t++) {
         for (i = start_row; i < end_row; i++)
             for (j = 1; j < N - 1; j++) {
-                b[i][j] = 0.2 * (a[i][j] + a[i][j - 1] + a[i][1 + j] + a[1 + i][j] + a[i - 1][j]);
+                B[i][j] = 0.2 * (A[i][j] + A[i][j - 1] + A[i][1 + j] + A[1 + i][j] + A[i - 1][j]);
             }
         pthread_barrier_wait(&barrier);
 
         for (i = start_row; i < end_row; i++)
             for (j = 1; j < N - 1; j++)
-                a[i][j] = b[i][j];
+                A[i][j] = B[i][j];
         pthread_barrier_wait(&barrier);
     }
 
@@ -45,15 +41,9 @@ void jacobi_2d_pthread(int t, int dce, int n_threads, int seed) {
     num_threads = n_threads;
     chunk_size = (N - 2) / num_threads;
 
-    /* Variable declaration/allocation. */
-    A = (DATA_TYPE(*)[N][N])polybench_alloc_data((N * N), sizeof(DATA_TYPE));
-    B = (DATA_TYPE(*)[N][N])polybench_alloc_data((N * N), sizeof(DATA_TYPE));
-    
     srand(seed);
     /* Initialize array(s). */
-    init_array_with_copy(N, POLYBENCH_ARRAY(A), POLYBENCH_ARRAY(B));
-
-    if (DEBUG) print_array(N, POLYBENCH_ARRAY(A));
+    init_array_with_copy(N, A, B);
 
     /* Start timer. */
     //   polybench_start_instruments;
@@ -99,9 +89,5 @@ void jacobi_2d_pthread(int t, int dce, int n_threads, int seed) {
     /* Prevent dead-code elimination. All live-out data must be printed
         by the function call in argument. */
     //   polybench_prevent_dce(print_array(n, POLYBENCH_ARRAY(A)));
-    if (dce) print_array(N, POLYBENCH_ARRAY(A));
-
-    /* Be clean. */
-    POLYBENCH_FREE_ARRAY(A);
-    POLYBENCH_FREE_ARRAY(B);
+    if (dce) print_array(N, A);
 }
