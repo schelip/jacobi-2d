@@ -6,7 +6,7 @@ INC_DIR = .
 
 SRC_POLYBENCH = polybench.c
 SRC_SERIAL = jacobi-2d-serial.c $(SRC_POLYBENCH)
-SRC_PARALLEL = jacobi-2d-parallel.c $(SRC_POLYBENCH)
+SRC_PARALLEL = jacobi-2d-pthread.c $(SRC_POLYBENCH)
 SRC_MAIN = main.c
 
 OBJ_POLYBENCH = $(addprefix $(OBJ_DIR)/,$(notdir $(SRC_POLYBENCH:.c=.o)))
@@ -15,7 +15,7 @@ OBJ_PARALLEL = $(addprefix $(OBJ_DIR)/,$(notdir $(SRC_PARALLEL:.c=.o)))
 OBJ_MAIN = $(addprefix $(OBJ_DIR)/,$(notdir $(SRC_MAIN:.c=.o)))
 
 BIN_SERIAL = $(BIN_DIR)/jacobi-2d-serial
-BIN_PARALLEL = $(BIN_DIR)/jacobi-2d-parallel
+BIN_PARALLEL = $(BIN_DIR)/jacobi-2d-pthread
 BIN_MAIN = $(BIN_DIR)/main
 
 .PHONY: all clean

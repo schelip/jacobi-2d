@@ -6,7 +6,7 @@
 #include <polybench.h>
 
 void jacobi_2d_serial(int t, int dce, int seed);
-void jacobi_2d_parallel(int t, int dce, int n_threads, int seed);
+void jacobi_2d_pthread(int t, int dce, int n_threads, int seed);
 
 const char *argp_program_version = "jacobi 2d computation 1.0";
 
@@ -82,7 +82,7 @@ int main(int argc, char *argv[]) {
 
     //srand(arguments.seed);
 
-    jacobi_2d_parallel(arguments.size, 1, arguments.threads, arguments.seed);
+    jacobi_2d_pthread(arguments.size, 1, arguments.threads, arguments.seed);
     jacobi_2d_serial(arguments.size, 1, arguments.seed);
 
     exit(0);

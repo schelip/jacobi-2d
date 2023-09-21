@@ -27,13 +27,13 @@ void jacobi_2d_serial(int t, int dce, int seed) {
 
   srand(seed);
   /* Initialize array(s). */
-  init_array (N, POLYBENCH_ARRAY(A), POLYBENCH_ARRAY(B));
+  init_array_with_copy(N, POLYBENCH_ARRAY(A), POLYBENCH_ARRAY(B));
 
   /* Start timer. */
 //   polybench_start_instruments;
 
   /* Run kernel. */
-  kernel_jacobi_2d_serial (t, POLYBENCH_ARRAY(A), POLYBENCH_ARRAY(B));
+  kernel_jacobi_2d_serial(t, POLYBENCH_ARRAY(A), POLYBENCH_ARRAY(B));
 
   /* Stop and print timer. */
 //   polybench_stop_instruments;

@@ -1,7 +1,7 @@
 #ifndef POLYBENCH_H
 #define POLYBENCH_H
 
-#define N 5
+#define N 8
 #define SMALL_DATASET 5
 #define MEDIUM_DATASET 400
 #define LARGE_DATASET 600
@@ -9,7 +9,9 @@
 #define MAX_VALUE 15
 
 #define DATA_TYPE double
-#define DATA_PRINTF_MODIFIER "%0.2lf "
+#define DATA_PRINTF_MODIFIER "%0.2lf\t"
+
+#define TAG 0
 
 #define DEBUG 0
 
@@ -25,7 +27,8 @@
 #define POLYBENCH_FREE_ARRAY(x) free((void*)x);
 
 extern void *polybench_alloc_data(unsigned long long int n, int elt_size);
-extern void init_array(int n, DATA_TYPE POLYBENCH_2D(A, N, N), DATA_TYPE POLYBENCH_2D(B, N, N));
+extern void init_array(int n, DATA_TYPE POLYBENCH_2D(A, N, N));
+extern void init_array_with_copy(int n, DATA_TYPE POLYBENCH_2D(A, N, N), DATA_TYPE POLYBENCH_2D(B, N, N));
 extern void print_array(int n, DATA_TYPE POLYBENCH_2D(A, N, N));
 
 #endif // POLYBENCH_H

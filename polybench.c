@@ -23,13 +23,23 @@ void* polybench_alloc_data(unsigned long long int n, int elt_size) {
 }
 
 /* Array initialization. */
-void init_array(int n, DATA_TYPE POLYBENCH_2D(A, N, N), DATA_TYPE POLYBENCH_2D(B, N, N)) {
+void init_array_with_copy(int n, DATA_TYPE POLYBENCH_2D(A, N, N), DATA_TYPE POLYBENCH_2D(B, N, N)) {
     int i, j;
 
     for (i = 0; i < n; i++)
         for (j = 0; j < n; j++) {
             A[i][j] = roundf((MAX_VALUE * ((DATA_TYPE)rand()) / RAND_MAX) * 100) / 100;
             B[i][j] = A[i][j];
+        }
+}
+
+/* Array initialization. */
+void init_array(int n, DATA_TYPE POLYBENCH_2D(A, N, N)) {
+    int i, j;
+
+    for (i = 0; i < n; i++)
+        for (j = 0; j < n; j++) {
+            A[i][j] = roundf((MAX_VALUE * ((DATA_TYPE)rand()) / RAND_MAX) * 100) / 100;
         }
 }
 
