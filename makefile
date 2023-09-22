@@ -1,38 +1,37 @@
+# Compiler
 CC = gcc
-CFLAGS = -Wall -Wextra -pthread
-OBJ_DIR = obj
+MPICC = mpicc
+
+# Flags
+CFLAGS = -Wall -O3
+LFLAGS = -lm
+
+# Directories
+SRC_DIR = src
 BIN_DIR = bin
-INC_DIR = .
 
-SRC_POLYBENCH = polybench.c
-SRC_SERIAL = jacobi-2d-serial.c $(SRC_POLYBENCH)
-SRC_PARALLEL = jacobi-2d-pthread.c $(SRC_POLYBENCH)
-SRC_MAIN = main.c
+# Source files
+SRC_SERIAL = $(SRC_DIR)/jacobi-2d-serial.c $(SRC_DIR)/polybench.c
+SRC_PTHREAD = $(SRC_DIR)/jacobi-2d-pthread.c $(SRC_DIR)/polybench.c
+SRC_MPI = $(SRC_DIR)/jacobi-2d-mpi.c $(SRC_DIR)/polybench.c
 
-OBJ_POLYBENCH = $(addprefix $(OBJ_DIR)/,$(notdir $(SRC_POLYBENCH:.c=.o)))
-OBJ_SERIAL = $(addprefix $(OBJ_DIR)/,$(notdir $(SRC_SERIAL:.c=.o)))
-OBJ_PARALLEL = $(addprefix $(OBJ_DIR)/,$(notdir $(SRC_PARALLEL:.c=.o)))
-OBJ_MAIN = $(addprefix $(OBJ_DIR)/,$(notdir $(SRC_MAIN:.c=.o)))
+# Executables
+EXEC_SERIAL = $(BIN_DIR)/jacobi-2d-serial
+EXEC_PTHREAD = $(BIN_DIR)/jacobi-2d-pthread
+EXEC_MPI = $(BIN_DIR)/jacobi-2d-mpi
 
-BIN_SERIAL = $(BIN_DIR)/jacobi-2d-serial
-BIN_PARALLEL = $(BIN_DIR)/jacobi-2d-pthread
-BIN_MAIN = $(BIN_DIR)/main
+all: $(EXEC_SERIAL) $(EXEC_PTHREAD) $(EXEC_MPI)
 
-.PHONY: all clean
+$(EXEC_SERIAL): $(SRC_SERIAL)
+	$(CC) -I $(SRC_DIR) $(CFLAGS) -o $@ $^ $(LFLAGS)
 
-all: $(BIN_MAIN)
+$(EXEC_PTHREAD): $(SRC_PTHREAD)
+	$(CC) -I $(SRC_DIR) $(CFLAGS) -pthread -o $@ $^ $(LFLAGS)
 
-$(BIN_MAIN): $(OBJ_MAIN) $(OBJ_SERIAL) $(OBJ_PARALLEL) $(OBJ_POLYBENCH) | $(BIN_DIR)
-	$(CC) $(CFLAGS) $^ -o $@ -lm
-
-$(OBJ_DIR)/%.o: %.c | $(OBJ_DIR)
-	$(CC) $(CFLAGS) -I$(INC_DIR) -c $< -o $@
-
-$(OBJ_DIR):
-	mkdir -p $(OBJ_DIR)
-
-$(BIN_DIR):
-	mkdir -p $(BIN_DIR)
+$(EXEC_MPI): $(SRC_MPI)
+	$(MPICC) -I $(SRC_DIR) $(CFLAGS) -o $@ $^ $(LFLAGS)
 
 clean:
-	rm -rf $(OBJ_DIR) $(BIN_DIR)
+	rm -rf $(BIN_DIR)/*.o $(EXEC_SERIAL) $(EXEC_PTHREAD) $(EXEC_MPI)
+
+.PHONY: all clean

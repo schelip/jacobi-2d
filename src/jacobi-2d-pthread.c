@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <pthread.h>
+#include <argp.h>
 
 #include <polybench.h>
 
@@ -34,15 +35,15 @@ void* worker_pthread(void* arg) {
     return (void*)NULL;
 }
 
-void jacobi_2d_pthread(int t, int dce, int n_threads, int seed) {
+void jacobi_2d_pthread(int t, int dce, int seed, int n_threads) {
     int i;
 
     tsteps = t;
     num_threads = n_threads;
     chunk_size = (N - 2) / num_threads;
 
-    srand(seed);
     /* Initialize array(s). */
+    srand(seed);
     init_array_with_copy(N, A, B);
 
     /* Start timer. */
@@ -90,4 +91,19 @@ void jacobi_2d_pthread(int t, int dce, int n_threads, int seed) {
         by the function call in argument. */
     //   polybench_prevent_dce(print_array(n, POLYBENCH_ARRAY(A)));
     if (dce) print_array(N, A);
+}
+
+/* The options we understand. */
+struct argp_option options[] = {
+    { "size", 'd', "SIZE", 0, "Dataset size option (SMALL, MEDIUM, LARGE) - defines the number of iterations for the computation", 0 },
+    { "threads", 't', "THREADS", 0, "Number of threads for the parallel computation", 0 },
+    { "seed", 's', "SEED", 0, "Seed for the array initialization", 0 },
+    { 0 }
+};
+
+int main(int argc, char *argv[]) {
+    struct arguments arguments;
+    parse_args(argc, argv, &arguments);
+    jacobi_2d_pthread(arguments.size, 1, arguments.seed, arguments.threads);
+    exit(0);
 }
