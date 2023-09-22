@@ -6,76 +6,86 @@
 
 #include <polybench.h>
 
-pthread_barrier_t barrier;
-
+/* Shared variables between all threads */
+static pthread_barrier_t barrier;
 static int tsteps, num_threads, chunk_size;
 static double A[N][N], B[N][N];
-
     
-void* worker_pthread(void* arg) {
-    int t, i, j;
-    int thread_id = *((int*)arg);
+static void *
+worker_pthread(void* arg)
+{
+    int t, i, j, thread_id, start_row, end_row;
 
-    int start_row = 1 + thread_id * chunk_size;
-    int end_row = (thread_id == num_threads - 1) ? (N - 1) : (start_row + chunk_size);
+    thread_id = *((int*)arg);
+    start_row = 1 + thread_id * chunk_size;
+    end_row = (thread_id == num_threads - 1) ? (N - 1) : (start_row + chunk_size);
 
-    for (t = 0; t < tsteps; t++) {
+    for (t = 0; t < tsteps; t++)
+    {
         for (i = start_row; i < end_row; i++)
-            for (j = 1; j < N - 1; j++) {
+            for (j = 1; j < N - 1; j++)
                 B[i][j] = 0.2 * (A[i][j] + A[i][j - 1] + A[i][1 + j] + A[1 + i][j] + A[i - 1][j]);
-            }
         pthread_barrier_wait(&barrier);
 
         for (i = start_row; i < end_row; i++)
             for (j = 1; j < N - 1; j++)
                 A[i][j] = B[i][j];
         pthread_barrier_wait(&barrier);
+
+        if (thread_id == 0 && DEBUG)
+        {
+            printf("Iter %d\n", t);
+            print_array(A);
+        }
     }
 
     return (void*)NULL;
 }
 
-void jacobi_2d_pthread(int t, int dce, int seed, int n_threads) {
-    int i;
+static void
+jacobi_2d_pthread(int l_tsteps, int seed, int n_threads) {
+    int i, *thread_id;
+    pthread_t *threads;
 
-    tsteps = t;
+    tsteps = l_tsteps;
     num_threads = n_threads;
     chunk_size = (N - 2) / num_threads;
 
     /* Initialize array(s). */
     srand(seed);
-    init_array_with_copy(N, A, B);
+    init_array_with_copy(A, B);
 
-    /* Start timer. */
-    //   polybench_start_instruments;
-    
-    /* Initialize threads and initialize barrier. */
-    pthread_t* threads = (pthread_t*)malloc(num_threads * sizeof(pthread_t));
-
-    if (threads == NULL) {
+    /* Initialize threads and barrier. */
+    threads = (pthread_t*)malloc(num_threads * sizeof(pthread_t));
+    if (threads == NULL)
+    {
         fprintf(stderr, "Error allocating memory for threads");
         exit(1);
     }
 
     pthread_barrier_init(&barrier, NULL, n_threads);
 
-    for (i = 0; i < n_threads; i++) {
-        int* thread_id = (int*)malloc(sizeof(int));if (thread_id == NULL) {
+    for (i = 0; i < n_threads; i++)
+    {
+        thread_id = (int*)malloc(sizeof(int));
+        if (thread_id == NULL) {
             fprintf(stderr, "Error allocating memory for thread ID\n");
             exit(1);
         }
         *thread_id = i;
 
-        /* Run kernel. */
-        if (pthread_create(&threads[i], NULL, worker_pthread, (void*)thread_id) != 0) {
+        if (pthread_create(&threads[i], NULL, worker_pthread, (void*)thread_id) != 0)
+        {
             fprintf(stderr, "Error creating thread %d", i);
             exit(1);
         }
     }
 
-    /* Wait for threads to finish and destroy barrier. */
-    for (i = 0; i < n_threads; i++) {
-        if (pthread_join(threads[i], NULL) != 0) {
+    /* Wait for threads to finish and destroy bxarrier. */
+    for (i = 0; i < n_threads; i++)
+    {
+        if (pthread_join(threads[i], NULL) != 0)
+        {
             fprintf(stderr, "Error joining thread %d", i);
             exit(1);
         };
@@ -83,27 +93,23 @@ void jacobi_2d_pthread(int t, int dce, int seed, int n_threads) {
     
     pthread_barrier_destroy(&barrier);
 
-    /* Stop and print timer. */
-    //   polybench_stop_instruments;
-    //   polybench_print_instruments;
-
-    /* Prevent dead-code elimination. All live-out data must be printed
-        by the function call in argument. */
-    //   polybench_prevent_dce(print_array(n, POLYBENCH_ARRAY(A)));
-    if (dce) print_array(N, A);
+    if (DEBUG) print_array(A);
 }
 
 /* The options we understand. */
-struct argp_option options[] = {
+struct argp_option options[] =
+{
     { "size", 'd', "SIZE", 0, "Dataset size option (SMALL, MEDIUM, LARGE) - defines the number of iterations for the computation", 0 },
     { "threads", 't', "THREADS", 0, "Number of threads for the parallel computation", 0 },
     { "seed", 's', "SEED", 0, "Seed for the array initialization", 0 },
     { 0 }
 };
 
-int main(int argc, char *argv[]) {
+int
+main(int argc, char *argv[])
+{
     struct arguments arguments;
     parse_args(argc, argv, &arguments);
-    jacobi_2d_pthread(arguments.size, 1, arguments.seed, arguments.threads);
+    jacobi_2d_pthread(arguments.size, arguments.seed, arguments.threads);
     exit(0);
 }

@@ -6,65 +6,55 @@
 
 #include <polybench.h>
 
-static void* xmalloc (size_t num) {
-    void* new = NULL;
-    int ret = posix_memalign(&new, 32, num);
-    if (!new || ret) {
-        fprintf(stderr, "[PolyBench] posix_memalign: cannot allocate memory");
-        exit(1);
-    }
-    return new;
-}
-
-void* polybench_alloc_data(unsigned long long int n, int elt_size) {
-    /// FIXME: detect overflow!
-    size_t val = n;
-    val *= elt_size;
-    void* ret = xmalloc(val);
-    return ret;
-}
-
 /* Array initialization. */
-void init_array_with_copy(int n, double A[N][N], double B[N][N]) {
+void
+init_array_with_copy(double A[N][N], double B[N][N])
+{
     int i, j;
 
-    for (i = 0; i < n; i++)
-        for (j = 0; j < n; j++) {
+    for (i = 0; i < N; i++)
+        for (j = 0; j < N; j++)
+        {
             A[i][j] = roundf((MAX_VALUE * ((double)rand()) / RAND_MAX) * 100) / 100;
             B[i][j] = A[i][j];
         }
 }
 
 /* Array initialization. */
-void init_array(int n, double A[N][N]) {
+void
+init_array(double A[N][N])
+{
     int i, j;
 
-    for (i = 0; i < n; i++)
-        for (j = 0; j < n; j++) {
+    for (i = 0; i < N; i++)
+        for (j = 0; j < N; j++)
             A[i][j] = roundf((MAX_VALUE * ((double)rand()) / RAND_MAX) * 100) / 100;
-        }
 }
 
-/* DCE code. Must scan the entire live-out data.
-   Can be used also to check the correctness of the output. */
-void print_array(int n, double A[N][N]) {
+/* Prints array values. */
+void
+print_array(double A[N][N])
+{
     int i, j;
 
-    for (i = 0; i < n; i++) {
-        for (j = 0; j < n; j++)
+    for (i = 0; i < N; i++)
+    {
+        for (j = 0; j < N; j++)
             fprintf(stdout, "%0.2lf\t", A[i][j]);
         fprintf(stdout, "\n");  
     }
     fprintf(stdout, "\n");
 }
 
+/* Program version. */
 const char *argp_program_version = "jacobi 2d computation 1.0";
 
 /* Program documentation. */
 static char doc[] = "Application for analysis of Parallel Programming in the 2D Jacobi Computation Problem";
 
 /* Parse a single option. */
-static error_t parse_opt(int key, char *arg, struct argp_state *state) {
+static error_t parse_opt(int key, char *arg, struct argp_state *state)
+{
     struct arguments *arguments = state->input;
 
     switch (key) {
@@ -96,8 +86,10 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state) {
 /* Our argp parser. */
 static struct argp argp = { options, parse_opt, 0, doc, NULL, NULL, NULL };
 
-
-void parse_args(int argc, char *argv[], struct arguments* arguments) {
+/* Parses arguments passed in command line, or uses default values. */
+void
+parse_args(int argc, char *argv[], struct arguments* arguments)
+{
     /* Default values */
     arguments->size = SMALL;
     arguments->threads = 2;
