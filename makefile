@@ -11,9 +11,9 @@ SRC_DIR = src
 BIN_DIR = bin
 
 # Source files
-SRC_SERIAL = $(SRC_DIR)/jacobi-2d-serial.c $(SRC_DIR)/polybench.c
-SRC_PTHREAD = $(SRC_DIR)/jacobi-2d-pthread.c $(SRC_DIR)/polybench.c
-SRC_MPI = $(SRC_DIR)/jacobi-2d-mpi.c $(SRC_DIR)/polybench.c
+SRC_SERIAL = $(SRC_DIR)/jacobi-2d-serial.c $(SRC_DIR)/common.c
+SRC_PTHREAD = $(SRC_DIR)/jacobi-2d-pthread.c $(SRC_DIR)/common.c
+SRC_MPI = $(SRC_DIR)/jacobi-2d-mpi.c $(SRC_DIR)/common.c
 
 # Executables
 EXEC_SERIAL = $(BIN_DIR)/jacobi-2d-serial

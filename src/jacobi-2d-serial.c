@@ -3,11 +3,14 @@
 #include <math.h>
 #include <argp.h>
 
-#include <polybench.h>
+#include <common.h>
+
+/* Variable declaration. */
+static double A[N][N], B[N][N];
 
 /* Main computational kernel. */
 static void
-kernel_jacobi_2d_serial(int tsteps, double A[N][N], double B[N][N]) {
+kernel_jacobi_2d_serial(int tsteps) {
     int t, i, j;
 
     for (t = 0; t < tsteps; t++)
@@ -29,15 +32,12 @@ kernel_jacobi_2d_serial(int tsteps, double A[N][N], double B[N][N]) {
 
 static void
 jacobi_2d_serial(int tsteps, int seed) {
-    /* Variable declaration. */
-    double A[N][N], B[N][N];
-
     /* Initialize array(s). */
     srand(seed);
     init_array_with_copy(A, B);
 
     /* Run kernel. */
-    kernel_jacobi_2d_serial(tsteps, A, B);
+    kernel_jacobi_2d_serial(tsteps);
 
     if (DEBUG)
         print_array(A);

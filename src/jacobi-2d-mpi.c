@@ -4,7 +4,7 @@
 #include <mpi.h>
 #include <argp.h>
 
-#include <polybench.h>
+#include <common.h>
 
 #define DEBUG_RANK -1
 

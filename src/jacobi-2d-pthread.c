@@ -4,7 +4,7 @@
 #include <pthread.h>
 #include <argp.h>
 
-#include <polybench.h>
+#include <common.h>
 
 /* Shared variables between all threads */
 static pthread_barrier_t barrier;
