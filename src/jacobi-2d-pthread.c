@@ -10,7 +10,8 @@
 static pthread_barrier_t barrier;
 static int tsteps, num_threads, chunk_size;
 static double A[N][N], B[N][N];
-    
+
+/* Worker function. Calculates final elements in a certain chunk of rows. */
 static void *
 jacobi_2d_worker_pthread(void* arg)
 {
@@ -22,17 +23,19 @@ jacobi_2d_worker_pthread(void* arg)
 
     for (t = 0; t < tsteps; t++)
     {
+        /* Calculate one iteration of the chunk. */
         for (i = start_row; i < end_row; i++)
             for (j = 1; j < N - 1; j++)
                 B[i][j] = 0.2 * (A[i][j] + A[i][j - 1] + A[i][1 + j] + A[1 + i][j] + A[i - 1][j]);
         pthread_barrier_wait(&barrier);
 
+        /* Update matrix */
         for (i = start_row; i < end_row; i++)
             for (j = 1; j < N - 1; j++)
                 A[i][j] = B[i][j];
         pthread_barrier_wait(&barrier);
 
-        if (thread_id == 0 && DEBUG)
+        if (thread_id == DEBUG_THREAD && DEBUG)
         {
             printf("Iter %d\n", t);
             print_array(A);
@@ -42,6 +45,7 @@ jacobi_2d_worker_pthread(void* arg)
     return (void*)NULL;
 }
 
+/* Main thread. Dispatches worker threads. */
 static void
 jacobi_2d_pthread(int seed) {
     int i, *thread_id;
@@ -63,6 +67,7 @@ jacobi_2d_pthread(int seed) {
 
     pthread_barrier_init(&barrier, NULL, num_threads);
 
+    /* Dispatch threads. */
     for (i = 0; i < num_threads; i++)
     {
         thread_id = (int*)malloc(sizeof(int));
@@ -81,17 +86,16 @@ jacobi_2d_pthread(int seed) {
 
     /* Wait for threads to finish and destroy bxarrier. */
     for (i = 0; i < num_threads; i++)
-    {
         if (pthread_join(threads[i], NULL) != 0)
         {
             fprintf(stderr, "Error joining thread %d", i);
             exit(1);
         };
-    }
     
     pthread_barrier_destroy(&barrier);
 
-    if (DEBUG) print_array(A);
+    if (DEBUG)
+        print_array(A);
 }
 
 /* The options we understand. */

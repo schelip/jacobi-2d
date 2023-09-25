@@ -1,8 +1,8 @@
 #ifndef COMMON_H
 #define COMMON_H
 
-#define N 10000
-#define SMALL_DATASET 200
+#define N 10
+#define SMALL_DATASET 4
 #define MEDIUM_DATASET 400
 #define LARGE_DATASET 600
 
@@ -10,7 +10,9 @@
 
 #define TAG 0
 
-#define DEBUG 0
+#define DEBUG 1
+#define DEBUG_THREAD 0
+#define DEBUG_RANK 0
 
 extern void init_array(double A[N][N]);
 extern void init_array_with_copy(double A[N][N], double B[N][N]);

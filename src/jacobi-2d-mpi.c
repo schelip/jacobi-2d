@@ -6,9 +6,7 @@
 
 #include <common.h>
 
-#define DEBUG_RANK -1
-
-static int rank, tsteps, num_workers, chunk_size;
+static int rank, tsteps, num_workers, chunk_size, start_row, end_row;
 static double A[N][N], B[N][N];
 
 /* Calculates the first and last row indexes for the chunk of a given rank */
@@ -24,8 +22,8 @@ static void
 jacobi_2d_worker_mpi()
 {
     /* Variable declaration. */
-    int t, i, j, neigh_above, neigh_below, start_row, end_row;
-
+    int t, i, j, neigh_above, neigh_below;
+    
     /* Get chunk limits for worker rank. */
     get_limits(rank, chunk_size, num_workers, &start_row, &end_row);
 
@@ -82,7 +80,7 @@ static void
 jacobi_2d_coordinator_mpi(int seed)
 {
     /* Variable declaration. */
-    int i, start_row, end_row, worker;
+    int i, worker_start_row, worker_end_row, worker;
 
     /* Initialize array(s). */
     srand(seed);
@@ -99,8 +97,8 @@ jacobi_2d_coordinator_mpi(int seed)
     /* Send initial values of chunks to workers */ 
     for (worker = 1; worker <= num_workers; worker++)
     {
-        get_limits(worker, chunk_size, num_workers, &start_row, &end_row);
-        for (i = start_row; i <= end_row; i++)
+        get_limits(worker, chunk_size, num_workers, &worker_start_row, &worker_end_row);
+        for (i = worker_start_row; i <= worker_end_row; i++)
             MPI_Send(&A[i][0], N, MPI_DOUBLE, worker, TAG, MPI_COMM_WORLD);
     }
 
@@ -109,8 +107,8 @@ jacobi_2d_coordinator_mpi(int seed)
     /* Receive final values of chunks from workers */
     for (worker = 1; worker <= num_workers; worker++)
     {
-        get_limits(worker, chunk_size, num_workers, &start_row, &end_row);
-        for (i = start_row; i <= end_row; i++)
+        get_limits(worker, chunk_size, num_workers, &worker_start_row, &worker_end_row);
+        for (i = worker_start_row; i <= worker_end_row; i++)
             MPI_Recv(&A[i][1], N - 1, MPI_DOUBLE, worker, TAG, MPI_COMM_WORLD, &status);
     }
 

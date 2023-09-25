@@ -7,44 +7,49 @@
 
 #include <common.h>
 
-#define DEBUG_RANK -1
-
-/* Shared variables between all threads */
-static pthread_barrier_t barrier;
-static int tsteps, num_threads, chunk_size, rank, start_row, end_row;
+// static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+// static pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
+static pthread_barrier_t sync_barrier, calc_barrier;
+static int rank, tsteps, num_workers, num_threads,
+    chunk_size, strip_size, start_row, end_row;
 static double A[N][N], B[N][N];
 
 /* Calculates the first and last row indexes for the chunk of a given rank */
 static void
-get_limits(int worker, int num_workers, int *start_row, int *end_row)
+get_limits(int rank, int chunk_size, int n_workers, int *start_row, int *end_row)
 {
-    *start_row = 1 + worker * chunk_size;
-    *end_row = (worker == num_workers) ? (N - 2) : (*start_row + chunk_size) - 1;
+    *start_row = 1 + rank * chunk_size;
+    *end_row = (rank == n_workers) ? (N - 2) : (*start_row + chunk_size) - 1;
 }
 
-/* Worker pthread function. Calculates final values of a strip of columns in the chunk of rows. */
+/* Worker function. Calculates final elements in a certain strip of columns in a chunk of rows. */
 static void *
 jacobi_2d_worker_pthread(void* arg)
 {
-    int t, i, j, thread_id, start_row, end_row;
+    int t, i, j, thread_id, start_col, end_col;
 
     thread_id = *((int*)arg);
-    start_row = 1 + thread_id * chunk_size;
-    end_row = (thread_id == num_threads - 1) ? (N - 1) : (start_row + chunk_size);
+    start_col = 1 + thread_id * strip_size;
+    end_col = (thread_id == num_threads - 1) ? (N - 2) : (start_col + strip_size);
 
     for (t = 0; t < tsteps; t++)
     {
-        for (i = start_row; i < end_row; i++)
-            for (j = 1; j < N - 1; j++)
+        /* Wait for main thred to update borders. */
+        pthread_barrier_wait(&sync_barrier);
+
+        /* Calculate one iteration of the strip. */
+        for (i = start_row; i <= end_row; i++)
+            for (j = start_col; j <= end_col; j++)
                 B[i][j] = 0.2 * (A[i][j] + A[i][j - 1] + A[i][1 + j] + A[1 + i][j] + A[i - 1][j]);
-        pthread_barrier_wait(&barrier);
+        pthread_barrier_wait(&calc_barrier);
 
-        for (i = start_row; i < end_row; i++)
-            for (j = 1; j < N - 1; j++)
+        /* Update matrix. */
+        for (i = start_row; i <= end_row; i++)
+            for (j = start_col; j <= end_col; j++)
                 A[i][j] = B[i][j];
-        pthread_barrier_wait(&barrier);
+        pthread_barrier_wait(&sync_barrier);
 
-        if (thread_id == 0 && DEBUG)
+        if (thread_id == DEBUG_THREAD && rank == DEBUG_RANK && DEBUG)
         {
             printf("Iter %d\n", t);
             print_array(A);
@@ -54,71 +59,103 @@ jacobi_2d_worker_pthread(void* arg)
     return (void*)NULL;
 }
 
-/* Worker MPI function. Receives chunk from the root and calculate final values of rows. */
+/* Worker function. Receives chunk from the root and calculate final values. */
 static void
-jacobi_2d_worker_mpi(int num_workers)
+jacobi_2d_worker_mpi()
 {
     /* Variable declaration. */
-    int t, i, j, neigh_above, neigh_below, *thread_id;
+    int t, i, *thread_id, neigh_above, neigh_below;
     pthread_t *threads;
 
+    /* Get chunk limits for worker rank. */
+    get_limits(rank, chunk_size, num_workers, &start_row, &end_row);
+
     neigh_above = rank - 1;
-    neigh_below = (rank == num_workers) ? 0 : rank + 1;
+    neigh_below = rank == num_workers ? 0 : rank + 1;
 
     MPI_Status status;
 
-    /* Receive number of iterations, threads and chunk size from root. */
-    MPI_Bcast(&tsteps, 1, MPI_INT, 0, MPI_COMM_WORLD);
-    MPI_Bcast(&num_threads, 1, MPI_INT, 0, MPI_COMM_WORLD);
-    MPI_Bcast(&chunk_size, 1, MPI_INT, 0, MPI_COMM_WORLD);
-
     /* If it is the max rank, it must receive the bottom row. */
-    if (!neigh_below) {
+    if (!neigh_below)
         MPI_Recv(&A[N - 1][0], N, MPI_DOUBLE, 0, TAG, MPI_COMM_WORLD, &status);
-    }
 
     /* Receive initial chunk values from root. */
-    for (i = start_row; i <= end_row; i++)
-        MPI_Recv(&A[i][0], N, MPI_DOUBLE, 0, TAG, MPI_COMM_WORLD, &status);
+    if (rank)
+        for (i = start_row; i <= end_row; i++)
+            MPI_Recv(&A[i][0], N, MPI_DOUBLE, 0, TAG, MPI_COMM_WORLD, &status);
+
+    /* Initialize threads and barriers. */
+    threads = (pthread_t*)malloc(num_threads * sizeof(pthread_t));
+    if (threads == NULL)
+    {
+        fprintf(stderr, "Error allocating memory for threads");
+        exit(1);
+    }
+
+    pthread_barrier_init(&sync_barrier, NULL, num_threads + 1);
+    pthread_barrier_init(&calc_barrier, NULL, num_threads);
+
+    /* Dispatch threads. */
+    for (i = 0; i < num_threads; i++)
+    {
+        thread_id = (int*)malloc(sizeof(int));
+        if (thread_id == NULL) {
+            fprintf(stderr, "Error allocating memory for thread ID\n");
+            exit(1);
+        }
+        *thread_id = i;
+
+        if (pthread_create(&threads[i], NULL, jacobi_2d_worker_pthread, (void*)thread_id) != 0)
+        {
+            fprintf(stderr, "Error creating thread %d", i);
+            exit(1);
+        }
+    }
 
     /* Calculate chunk. */
     for (t = 0; t < tsteps; t++)
     {
         /* Share borders with neighbors above and below. */
-        MPI_Send(&A[start_row][0], N, MPI_DOUBLE, neigh_above, TAG, MPI_COMM_WORLD);
+        if (rank)
+            MPI_Send(&A[start_row][0], N, MPI_DOUBLE, neigh_above, TAG, MPI_COMM_WORLD);
         if (neigh_below)
         {
             MPI_Send(&A[end_row][0], N, MPI_DOUBLE, neigh_below, TAG, MPI_COMM_WORLD);
             MPI_Recv(&A[end_row + 1][0], N, MPI_DOUBLE, neigh_below, TAG, MPI_COMM_WORLD, &status);
         }
-        MPI_Recv(&A[start_row - 1][0], N, MPI_DOUBLE, neigh_above, TAG, MPI_COMM_WORLD, &status);
-        
-        for (i = start_row; i <= end_row; i++)
-	        for (j = 1; j < N - 1; j++)
-	            B[i][j] = 0.2 * (A[i][j] + A[i][j - 1] + A[i][1 + j] + A[1 + i][j] + A[i - 1][j]);
-        for (i = start_row; i <= end_row; i++)
-	        for (j = 1; j < N - 1; j++)
-	            A[i][j] = B[i][j];
-    
-        if (rank == DEBUG_RANK && DEBUG)
-        {
-            printf("Iter %d of worker %d\n", t, rank);
-            print_array(A);
-        }
+        if (rank)
+            MPI_Recv(&A[start_row - 1][0], N, MPI_DOUBLE, neigh_above, TAG, MPI_COMM_WORLD, &status);
+
+        /* Signal to threads that borders have been updated. */
+        pthread_barrier_wait(&sync_barrier);
+
+        /* Wait for threads to finish calculating iteration and updating matrix. */
+        pthread_barrier_wait(&sync_barrier);
     }
 
+    /* Wait for threads to finish and destroy barriers. */
+    for (i = 0; i < num_threads; i++)
+        if (pthread_join(threads[i], NULL) != 0)
+        {
+            fprintf(stderr, "Error joining thread %d", i);
+            exit(1);
+        };
+    
+    pthread_barrier_destroy(&sync_barrier);
+    pthread_barrier_destroy(&calc_barrier);
+
     /* Send final chunk values from root. */
-    for (i = start_row; i <= end_row; i++)
-        MPI_Send(&A[i][1], N - 1, MPI_DOUBLE, 0, TAG, MPI_COMM_WORLD);
+    if (rank)
+        for (i = start_row; i <= end_row; i++)
+            MPI_Send(&A[i][1], N - 1, MPI_DOUBLE, 0, TAG, MPI_COMM_WORLD);
 }
 
 /* Coordinator function. Initializes array, then share work between workers and also do work itself. */
 static void
-jacobi_2d_coordinator_mpi(int seed, int num_workers)
+jacobi_2d_coordinator_mpi(int seed)
 {
     /* Variable declaration. */
-    int t, i, j, start_row, end_row, worker;
-    double A[N][N], B[N][N];
+    int i, worker_start_row, worker_end_row, worker;
 
     /* Initialize array(s). */
     srand(seed);
@@ -129,52 +166,25 @@ jacobi_2d_coordinator_mpi(int seed, int num_workers)
 
     MPI_Status status;
 
-    /* Broadcast number of iterations, threads and chunk size to workers. */
-    MPI_Bcast(&tsteps, 1, MPI_INT, 0, MPI_COMM_WORLD);
-    MPI_Bcast(&num_threads, 1, MPI_INT, 0, MPI_COMM_WORLD);
-    MPI_Bcast(&chunk_size, 1, MPI_INT, 0, MPI_COMM_WORLD);
-
     /* Send bottom row to max rank worker */
     MPI_Send(&A[N - 1][0], N, MPI_DOUBLE, num_workers, TAG, MPI_COMM_WORLD);
 
     /* Send initial values of chunks to workers */ 
     for (worker = 1; worker <= num_workers; worker++)
     {
-        get_limits(worker, chunk_size, num_workers, &start_row, &end_row);
-        for (i = start_row; i <= end_row; i++)
+        get_limits(worker, chunk_size, num_workers, &worker_start_row, &worker_end_row);
+        for (i = worker_start_row; i <= worker_end_row; i++)
             MPI_Send(&A[i][0], N, MPI_DOUBLE, worker, TAG, MPI_COMM_WORLD);
     }
 
-    /* Calculate first chunk. */
-    start_row = 1;
-    end_row = chunk_size;
-    for (t = 0; t < tsteps; t++)
-    {
-        /* Share borders with neighbor below. */
-        MPI_Send(&A[end_row][0], N, MPI_DOUBLE, 1, TAG, MPI_COMM_WORLD);
-        MPI_Recv(&A[end_row + 1][0], N, MPI_DOUBLE, 1, TAG, MPI_COMM_WORLD, &status);
-
-        for (i = 1; i <= end_row; i++)
-	        for (j = 1; j < N - 1; j++)
-	            B[i][j] = 0.2 * (A[i][j] + A[i][j - 1] + A[i][1 + j] + A[1 + i][j] + A[i - 1][j]);
-        for (i = 1; i <= end_row; i++)
-	        for (j = 1; j < N - 1; j++)
-	            A[i][j] = B[i][j];
-    
-        if (DEBUG_RANK == 0 && DEBUG)
-        {
-            printf("Iter %d of worker 0\n", t);
-            print_array(A);
-        }
-    }
+    jacobi_2d_worker_mpi(0);
 
     /* Receive final values of chunks from workers */
     for (worker = 1; worker <= num_workers; worker++)
     {
-        get_limits(worker, chunk_size, num_workers, &start_row, &end_row);
-        for (i = start_row; i <= end_row; i++) {
+        get_limits(worker, chunk_size, num_workers, &worker_start_row, &worker_end_row);
+        for (i = worker_start_row; i <= worker_end_row; i++)
             MPI_Recv(&A[i][1], N - 1, MPI_DOUBLE, worker, TAG, MPI_COMM_WORLD, &status);
-        }
     }
 
     if (DEBUG)
@@ -193,31 +203,40 @@ struct argp_option options[] =
 int
 main(int argc, char *argv[])
 {
-    int num_workers, provided;
-    MPI_Init(&argc, &argv, MPI_THREAD_FUNNELED);
-    if(provided != MPI_THREAD_MULTIPLE) 
+    int seed = 1, provided;
+
+    MPI_Init_thread(&argc, &argv, MPI_THREAD_FUNNELED, &provided); 
+    if(provided != MPI_THREAD_FUNNELED) 
     {
-        fprintf(stderr, "This MPI implementation does not support MPI_THREAD_FUNNELED.\n");
+        fprintf(stderr, "This MPI implementation does not support MPI_THREAD_MULTIPLE.\n");
         exit(1);
     }
-    
+
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &num_workers);
     
     chunk_size = (N - 2) / num_workers;
     num_workers--;
 
-    if (rank == 0) {
+    if (!rank)
+    {
         struct arguments arguments;
         parse_args(argc, argv, &arguments);
         tsteps = arguments.size;
+        seed = arguments.seed;
         num_threads = arguments.threads;
-        jacobi_2d_coordinator_mpi(arguments.seed, num_workers);
-    } else {
-        /* Get chunk limits for worker rank. */
-        get_limits(rank, chunk_size, num_workers, &start_row, &end_row);
-        jacobi_2d_worker_mpi(num_workers);
+        strip_size = (N - 2) / num_threads;
     }
+    
+    /* Syncronize parameters read by root. */
+    MPI_Bcast(&tsteps, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&num_threads, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&strip_size, 1, MPI_INT, 0, MPI_COMM_WORLD);
+
+    if (!rank)
+        jacobi_2d_coordinator_mpi(seed);
+    else
+        jacobi_2d_worker_mpi();
 
     MPI_Finalize();
     exit(0);
