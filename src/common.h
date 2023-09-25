@@ -2,7 +2,7 @@
 #define COMMON_H
 
 #define N 10000
-#define SMALL_DATASET 20
+#define SMALL_DATASET 200
 #define MEDIUM_DATASET 400
 #define LARGE_DATASET 600
 

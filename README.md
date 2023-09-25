@@ -31,5 +31,5 @@ $ make
 
 Além disso, cada executável pode receber parâmetros adicionais em tempo de execução, que podem ser listados com `--help`.
 ```bash
-bin/jacobi-2d-pthread -d MEDIUM -s 123 -t 4
+bin/jacobi-2d-pthread --size MEDIUM --seed 123 --threads 4
 ```
