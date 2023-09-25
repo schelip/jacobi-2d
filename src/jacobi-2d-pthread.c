@@ -12,7 +12,7 @@ static int tsteps, num_threads, chunk_size;
 static double A[N][N], B[N][N];
     
 static void *
-worker_pthread(void* arg)
+jacobi_2d_worker_pthread(void* arg)
 {
     int t, i, j, thread_id, start_row, end_row;
 
@@ -43,12 +43,10 @@ worker_pthread(void* arg)
 }
 
 static void
-jacobi_2d_pthread(int l_tsteps, int seed, int n_threads) {
+jacobi_2d_pthread(int seed) {
     int i, *thread_id;
     pthread_t *threads;
 
-    tsteps = l_tsteps;
-    num_threads = n_threads;
     chunk_size = (N - 2) / num_threads;
 
     /* Initialize array(s). */
@@ -63,9 +61,9 @@ jacobi_2d_pthread(int l_tsteps, int seed, int n_threads) {
         exit(1);
     }
 
-    pthread_barrier_init(&barrier, NULL, n_threads);
+    pthread_barrier_init(&barrier, NULL, num_threads);
 
-    for (i = 0; i < n_threads; i++)
+    for (i = 0; i < num_threads; i++)
     {
         thread_id = (int*)malloc(sizeof(int));
         if (thread_id == NULL) {
@@ -74,7 +72,7 @@ jacobi_2d_pthread(int l_tsteps, int seed, int n_threads) {
         }
         *thread_id = i;
 
-        if (pthread_create(&threads[i], NULL, worker_pthread, (void*)thread_id) != 0)
+        if (pthread_create(&threads[i], NULL, jacobi_2d_worker_pthread, (void*)thread_id) != 0)
         {
             fprintf(stderr, "Error creating thread %d", i);
             exit(1);
@@ -82,7 +80,7 @@ jacobi_2d_pthread(int l_tsteps, int seed, int n_threads) {
     }
 
     /* Wait for threads to finish and destroy bxarrier. */
-    for (i = 0; i < n_threads; i++)
+    for (i = 0; i < num_threads; i++)
     {
         if (pthread_join(threads[i], NULL) != 0)
         {
@@ -110,6 +108,8 @@ main(int argc, char *argv[])
 {
     struct arguments arguments;
     parse_args(argc, argv, &arguments);
-    jacobi_2d_pthread(arguments.size, arguments.seed, arguments.threads);
+    tsteps = arguments.size;
+    num_threads = arguments.threads;
+    jacobi_2d_pthread(arguments.seed);
     exit(0);
 }
