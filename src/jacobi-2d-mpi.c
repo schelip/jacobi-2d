@@ -9,7 +9,7 @@
 static int rank, tsteps, num_workers, chunk_size, start_row, end_row;
 static double A[N][N], B[N][N];
 
-/* Calculates the first and last row indexes for the chunk of a given rank */
+/* Calculates the first and last row indexes for the chunk of a given rank. */
 static void
 get_limits(int rank, int chunk_size, int n_workers, int *start_row, int *end_row)
 {
@@ -33,7 +33,7 @@ jacobi_2d_worker_mpi()
     MPI_Status status;
 
     /* If it is the max rank, it must receive the bottom row. */
-    if (!neigh_below)
+    if (!neigh_below && rank)
         MPI_Recv(&A[N - 1][0], N, MPI_DOUBLE, 0, TAG, MPI_COMM_WORLD, &status);
 
     /* Receive initial chunk values from root. */
@@ -46,14 +46,14 @@ jacobi_2d_worker_mpi()
     {
         /* Share borders with neighbors above and below. */
         if (rank)
-            MPI_Send(&A[start_row][0], N, MPI_DOUBLE, neigh_above, TAG, MPI_COMM_WORLD);
+            MPI_Recv(&A[start_row - 1][0], N, MPI_DOUBLE, neigh_above, TAG, MPI_COMM_WORLD, &status);
         if (neigh_below)
         {
             MPI_Send(&A[end_row][0], N, MPI_DOUBLE, neigh_below, TAG, MPI_COMM_WORLD);
             MPI_Recv(&A[end_row + 1][0], N, MPI_DOUBLE, neigh_below, TAG, MPI_COMM_WORLD, &status);
         }
         if (rank)
-            MPI_Recv(&A[start_row - 1][0], N, MPI_DOUBLE, neigh_above, TAG, MPI_COMM_WORLD, &status);
+            MPI_Send(&A[start_row][0], N, MPI_DOUBLE, neigh_above, TAG, MPI_COMM_WORLD);
         
         for (i = start_row; i <= end_row; i++)
 	        for (j = 1; j < N - 1; j++)
@@ -91,10 +91,11 @@ jacobi_2d_coordinator_mpi(int seed)
 
     MPI_Status status;
 
-    /* Send bottom row to max rank worker */
-    MPI_Send(&A[N - 1][0], N, MPI_DOUBLE, num_workers, TAG, MPI_COMM_WORLD);
+    /* Send bottom row to max rank worker .*/
+    if (num_workers)
+        MPI_Send(&A[N - 1][0], N, MPI_DOUBLE, num_workers, TAG, MPI_COMM_WORLD);
 
-    /* Send initial values of chunks to workers */ 
+    /* Send initial values of chunks to workers. */ 
     for (worker = 1; worker <= num_workers; worker++)
     {
         get_limits(worker, chunk_size, num_workers, &worker_start_row, &worker_end_row);
@@ -104,7 +105,7 @@ jacobi_2d_coordinator_mpi(int seed)
 
     jacobi_2d_worker_mpi(0);
 
-    /* Receive final values of chunks from workers */
+    /* Receive final values of chunks from workers. */
     for (worker = 1; worker <= num_workers; worker++)
     {
         get_limits(worker, chunk_size, num_workers, &worker_start_row, &worker_end_row);

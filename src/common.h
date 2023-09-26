@@ -1,7 +1,7 @@
 #ifndef COMMON_H
 #define COMMON_H
 
-#define N 1000
+#define N 10000
 #define SMALL_DATASET 300
 #define MEDIUM_DATASET 600
 #define LARGE_DATASET 900

@@ -3,7 +3,9 @@
 make clean
 make
 
-output_file="speedup_results.txt"
+output_file="speedup_results.csv"
+rm "$output_file"
+echo "PROGRAM,DATASET,THREADS,PROCESSES,PARALLEL_TIME,SPEEDUP" >> "$output_file"
 
 # Define the executable programs and dataset sizes
 programs=("pthread" "mpi" "mpi-pthread")
@@ -11,10 +13,6 @@ datasets=("SMALL" "MEDIUM" "LARGE")
 
 # Define the number of repetitions
 repetitions=10
-
-# Define thread and process configurations
-threads=("2" "4" "8" "16")
-processes=("2" "4" "8" "16")
 
 # Declare an associative array to store serial execution times for each dataset
 declare -A serial_times
@@ -42,16 +40,16 @@ calculate_speedup() {
         else
             parallel_time=$(echo "$parallel_time + $(env time -f "%e" mpirun -np $processes bin/jacobi-2d-$program -d $dataset -t $threads 2>&1)" | bc -l)
         fi
-        echo "jacobi-2d-$program $dataset execution $i time: ${serial_times[$dataset]}"
+        echo "jacobi-2d-$program $dataset execution $i time: $parallel_time"
     done
 
     # Calculate the average time
     parallel_time=$(bc -l <<< "$parallel_time / $repetitions")
-    echo "jacobi-2d-$program $dataset average execution time: ${serial_times[$dataset]}"
+    echo "jacobi-2d-$program $dataset average execution time: $parallel_time"
 
     # Calculate speedup
     speedup=$(bc -l <<< "$serial_time / $parallel_time")
-    echo "Speedup of $program with dataset $dataset, $threads threads, and $processes processes: $speedup"
+    echo -e "Speedup of $program with dataset $dataset, $threads threads, and $processes processes: $speedup\n"
 
     # Save results to file
     echo "$program,$dataset,$threads,$processes,$parallel_time,$speedup" >> "$output_file"
@@ -63,33 +61,36 @@ for dataset in "${datasets[@]}"; do
     for ((i=1; i<=$repetitions; i++)); do
         echo "Calculating jacobi-2d-serial execution time for dataset $dataset..."
         serial_time=$(echo "$serial_time + $(env time -f "%e" bin/jacobi-2d-serial -d $dataset 2>&1)" | bc -l)
-        echo "jacobi-2d-serial $dataset execution $t time: ${serial_times[$dataset]}"
+        echo "jacobi-2d-serial $dataset execution $i time: $serial_time"
     done
 
-    serial_time=$(bc -l <<< "$serial_time / $repetitions")
-    echo "jacobi-2d-serial $dataset average execution time: ${serial_times[$dataset]}"
-
-    # Salvar os resultados no arquivo
-    echo "serial,$dataset,1,1,$serial_time,1" >> "$output_file"
+    serial_times[$dataset]=$(bc -l <<< "$serial_time / $repetitions")
+    echo -e "jacobi-2d-serial $dataset average execution time: ${serial_times[$dataset]}\n"
+    echo "serial,$dataset,1,1,${serial_times[$dataset]},1" >> "$output_file"
 done
 
 # Loop through all programs, datasets, threads, and processes
-for program in "${programs[@]}"; do
-    for dataset in "${datasets[@]}"; do
-        if [ "$program" == "pthread" ]; then
-            for t in "${threads[@]}"; do
-                calculate_speedup "$program" "$dataset" "$t" "1"
-            done
-        elif [ "$program" == "mpi" ]; then
-            for p in "${processes[@]}"; do
-                calculate_speedup "$program" "$dataset" "1" "$p"
-            done
-        else
-            for p in "${processes[@]}"; do
-                for t in "${threads[@]}"; do
-                    calculate_speedup "$program" "$dataset" "$t" "$p"
-                done
-            done
-        fi
+
+for dataset in "${datasets[@]}"; do
+    threads=(2 4 8 16)
+    for t in "${threads[@]}"; do
+        calculate_speedup "pthread" "$dataset" "$t" "1"
+    done
+done
+
+for dataset in "${datasets[@]}"; do
+    processes=(2 4 8)
+    for p in "${processes[@]}"; do
+        calculate_speedup "mpi" "$dataset" "1" "$p"
+    done
+done
+
+for dataset in "${datasets[@]}"; do
+    processes=(2 4 8)
+    for p in "${processes[@]}"; do
+        threads=(2 4 8 16)
+        for t in "${threads[@]}"; do
+            calculate_speedup "mpi-pthread" "$dataset" "$t" "$p"
+        done
     done
 done

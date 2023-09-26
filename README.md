@@ -33,3 +33,12 @@ Além disso, cada executável pode receber parâmetros adicionais em tempo de ex
 ```bash
 bin/jacobi-2d-pthread --size MEDIUM --seed 123 --threads 4
 ```
+
+## Scripts
+
+Foram desenvolvidos alguns scripts shell para analisar a execução das implementações. Eles podem ser executados com `bash`, por exemplo:
+```bash
+$ bash scripts/speedup.sh
+```
+
+Os scripts têm como dependência vários comandos utilitários, a maioria disponíveis por padrão em distribuições inspiradas em Ubuntu/Debian, como `time` e `bc`.
