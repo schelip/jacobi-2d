@@ -1,16 +1,16 @@
 #ifndef COMMON_H
 #define COMMON_H
 
-#define N 10
-#define SMALL_DATASET 4
-#define MEDIUM_DATASET 400
-#define LARGE_DATASET 600
+#define N 1000
+#define SMALL_DATASET 300
+#define MEDIUM_DATASET 600
+#define LARGE_DATASET 900
 
 #define MAX_VALUE 15
 
 #define TAG 0
 
-#define DEBUG 1
+#define DEBUG 0
 #define DEBUG_THREAD 0
 #define DEBUG_RANK 0
 

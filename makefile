@@ -22,6 +22,9 @@ EXEC_PTHREAD = $(BIN_DIR)/jacobi-2d-pthread
 EXEC_MPI = $(BIN_DIR)/jacobi-2d-mpi
 EXEC_MPI_PTHREAD = $(BIN_DIR)/jacobi-2d-mpi-pthread
 
+# Create bin directory
+$(shell mkdir -p $(BIN_DIR))
+
 all: $(EXEC_SERIAL) $(EXEC_PTHREAD) $(EXEC_MPI) $(EXEC_MPI_PTHREAD)
 
 $(EXEC_SERIAL): $(SRC_SERIAL)

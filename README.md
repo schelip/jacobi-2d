@@ -8,7 +8,7 @@ Desenvolvido durante a disciplina de Programação Paralela no curso de Ciência
 
 ## Requisitos
 
-Esse projeto foi desenvolvido para sistemas linux, utilizando o WSL2 Debian, com o GCC. São utilizadas as bibliotecas nativas `math.h`, `argp.h` e `pthread.h`. Também foi utilizada a biblioteca `mpi.h`, que pode ser obtida com:
+Esse projeto foi desenvolvido para sistemas linux (testado em um sistema baseado em Debian), sendo compilado com o GCC. São utilizadas as bibliotecas nativas `math.h`, `argp.h` e `pthread.h`. Também foi utilizada a biblioteca `mpi.h`, que pode ser obtida com:
 
 ```bash
 $ sudo apt-get update
