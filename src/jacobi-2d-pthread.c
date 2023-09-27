@@ -9,36 +9,36 @@
 /* Shared variables between all threads */
 static pthread_barrier_t barrier;
 static int tsteps, num_threads, chunk_size;
-static double A[N][N], B[N][N];
+static double grid[2][N][N];
 
 /* Worker function. Calculates final elements in a certain chunk of rows. */
 static void *
 jacobi_2d_worker_pthread(void* arg)
 {
-    int t, i, j, thread_id, start_row, end_row;
+    int t, i, j, thread_id, start_row, end_row, to, from;
 
     thread_id = *((int*)arg);
     start_row = 1 + thread_id * chunk_size;
     end_row = (thread_id == num_threads - 1) ? (N - 1) : (start_row + chunk_size);
+    to = 0;
+    from = 1;
 
     for (t = 0; t < tsteps; t++)
     {
         /* Calculate one iteration of the chunk. */
         for (i = start_row; i < end_row; i++)
             for (j = 1; j < N - 1; j++)
-                B[i][j] = 0.2 * (A[i][j] + A[i][j - 1] + A[i][1 + j] + A[1 + i][j] + A[i - 1][j]);
+                grid[to][i][j] = 0.2 * (grid[from][i][j] + grid[from][i][j - 1] + grid[from][i][1 + j] + grid[from][1 + i][j] + grid[from][i - 1][j]);
         pthread_barrier_wait(&barrier);
 
-        /* Update matrix */
-        for (i = start_row; i < end_row; i++)
-            for (j = 1; j < N - 1; j++)
-                A[i][j] = B[i][j];
-        pthread_barrier_wait(&barrier);
+        /* Swap grids. */
+        from = to;
+        to = 1 - to;
 
         if (thread_id == DEBUG_THREAD && DEBUG)
         {
             printf("Iter %d\n", t);
-            print_array(A);
+            print_array(grid[from]);
         }
     }
 
@@ -55,7 +55,7 @@ jacobi_2d_pthread(int seed) {
 
     /* Initialize array(s). */
     srand(seed);
-    init_array_with_copy(A, B);
+    init_array_with_copy(grid[0], grid[1]);
 
     /* Initialize threads and barrier. */
     threads = (pthread_t*)malloc(num_threads * sizeof(pthread_t));
@@ -95,7 +95,7 @@ jacobi_2d_pthread(int seed) {
     pthread_barrier_destroy(&barrier);
 
     if (DEBUG)
-        print_array(A);
+        print_array(grid[1 - tsteps % 2]); // If even tsteps, result will be in grid[1]
 }
 
 /* The options we understand. */
