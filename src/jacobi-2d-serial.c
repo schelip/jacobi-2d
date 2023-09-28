@@ -2,18 +2,19 @@
 #include <stdlib.h>
 #include <math.h>
 #include <argp.h>
+#include <sys/time.h>
 
 #include <common.h>
 
 /* Variable declaration. */
-DECLARE_GRIDS()
+DECLARE_GRIDS
 
 /* Main computational kernel. */
 static void
 kernel_jacobi_2d_serial(int tsteps) {
     int t, i, j;
 
-    PREPARE_GRIDS()
+    PREPARE_GRIDS
 
     for (t = 0; t < tsteps; t++)
     {
@@ -27,7 +28,7 @@ kernel_jacobi_2d_serial(int tsteps) {
             print_grid(B);
         }
 
-        SWAP_GRIDS()
+        SWAP_GRIDS
     }
 }
 
@@ -58,8 +59,13 @@ struct argp_option options[] =
 
 int
 main(int argc, char *argv[]) {
+    START_TIMER
+
     struct arguments arguments;
     parse_args(argc, argv, &arguments);
     jacobi_2d_serial(arguments.size, arguments.seed);
-    exit(0);
+
+    STOP_TIMER
+    
+    exit(EXIT_SUCCESS);
 }

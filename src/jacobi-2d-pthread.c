@@ -3,6 +3,7 @@
 #include <math.h>
 #include <pthread.h>
 #include <argp.h>
+#include <sys/time.h>
 
 #include <common.h>
 
@@ -10,7 +11,7 @@
 static pthread_barrier_t barrier;
 static int tsteps, num_threads, chunk_size;
 
-DECLARE_GRIDS()
+DECLARE_GRIDS
 
 /* Worker function. Calculates final elements in a certain chunk of rows. */
 static void *
@@ -22,7 +23,7 @@ jacobi_2d_worker_pthread(void* arg)
     start_row = 1 + thread_id * chunk_size;
     end_row = (thread_id == num_threads - 1) ? (N - 1) : (start_row + chunk_size);
 
-    PREPARE_GRIDS()
+    PREPARE_GRIDS
 
     for (t = 0; t < tsteps; t++)
     {
@@ -38,7 +39,7 @@ jacobi_2d_worker_pthread(void* arg)
             print_grid(B);
         }
 
-        SWAP_GRIDS()
+        SWAP_GRIDS
     }
 
     return (void*)NULL;
@@ -55,14 +56,16 @@ jacobi_2d_pthread(int seed) {
     /* Initialize array(s). */
     srand(seed);
     init_grid_with_copy(INITIAL_GRID, AUX_GRID);
-    print_grid(INITIAL_GRID);
+    
+    if (DEBUG)
+        print_grid(INITIAL_GRID);
 
     /* Initialize threads and barrier. */
     threads = (pthread_t*)malloc(num_threads * sizeof(pthread_t));
     if (threads == NULL)
     {
         fprintf(stderr, "Error allocating memory for threads");
-        exit(1);
+        exit(EXIT_FAILURE);
     }
 
     pthread_barrier_init(&barrier, NULL, num_threads);
@@ -73,14 +76,14 @@ jacobi_2d_pthread(int seed) {
         thread_id = (int*)malloc(sizeof(int));
         if (thread_id == NULL) {
             fprintf(stderr, "Error allocating memory for thread ID\n");
-            exit(1);
+            exit(EXIT_FAILURE);
         }
         *thread_id = i;
 
         if (pthread_create(&threads[i], NULL, jacobi_2d_worker_pthread, (void*)thread_id) != 0)
         {
             fprintf(stderr, "Error creating thread %d", i);
-            exit(1);
+            exit(EXIT_FAILURE);
         }
     }
 
@@ -89,7 +92,7 @@ jacobi_2d_pthread(int seed) {
         if (pthread_join(threads[i], NULL) != 0)
         {
             fprintf(stderr, "Error joining thread %d", i);
-            exit(1);
+            exit(EXIT_FAILURE);
         };
     
     pthread_barrier_destroy(&barrier);
@@ -110,10 +113,15 @@ struct argp_option options[] =
 int
 main(int argc, char *argv[])
 {
+    START_TIMER
+
     struct arguments arguments;
     parse_args(argc, argv, &arguments);
     tsteps = arguments.size;
     num_threads = arguments.threads;
     jacobi_2d_pthread(arguments.seed);
-    exit(0);
+
+    STOP_TIMER
+
+    exit(EXIT_SUCCESS);
 }

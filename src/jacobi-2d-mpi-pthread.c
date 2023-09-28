@@ -7,8 +7,6 @@
 
 #include <common.h>
 
-// static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-// static pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
 static pthread_barrier_t sync_barrier, calc_barrier;
 static int rank, tsteps, num_workers, num_threads,
     chunk_size, strip_size, start_row, end_row;
@@ -89,7 +87,7 @@ jacobi_2d_worker_mpi()
     if (threads == NULL)
     {
         fprintf(stderr, "Error allocating memory for threads");
-        exit(1);
+        exit(EXIT_FAILURE);
     }
 
     pthread_barrier_init(&sync_barrier, NULL, num_threads + 1);
@@ -101,14 +99,14 @@ jacobi_2d_worker_mpi()
         thread_id = (int*)malloc(sizeof(int));
         if (thread_id == NULL) {
             fprintf(stderr, "Error allocating memory for thread ID\n");
-            exit(1);
+            exit(EXIT_FAILURE);
         }
         *thread_id = i;
 
         if (pthread_create(&threads[i], NULL, jacobi_2d_worker_pthread, (void*)thread_id) != 0)
         {
             fprintf(stderr, "Error creating thread %d", i);
-            exit(1);
+            exit(EXIT_FAILURE);
         }
     }
 
@@ -138,7 +136,7 @@ jacobi_2d_worker_mpi()
         if (pthread_join(threads[i], NULL) != 0)
         {
             fprintf(stderr, "Error joining thread %d", i);
-            exit(1);
+            exit(EXIT_FAILURE);
         };
     
     pthread_barrier_destroy(&sync_barrier);
@@ -210,7 +208,7 @@ main(int argc, char *argv[])
     if(provided != MPI_THREAD_FUNNELED) 
     {
         fprintf(stderr, "This MPI implementation does not support MPI_THREAD_MULTIPLE.\n");
-        exit(1);
+        exit(EXIT_FAILURE);
     }
 
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -240,5 +238,5 @@ main(int argc, char *argv[])
         jacobi_2d_worker_mpi();
 
     MPI_Finalize();
-    exit(0);
+    exit(EXIT_SUCCESS);
 }

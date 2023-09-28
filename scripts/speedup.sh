@@ -8,8 +8,8 @@ rm "$output_file"
 echo "PROGRAM,DATASET,THREADS,PROCESSES,PARALLEL_TIME,SPEEDUP" >> "$output_file"
 
 # Define the executable programs and dataset sizes
-programs=("pthread" "mpi" "mpi-pthread")
-datasets=("SMALL" )
+programs=("pthread" "mpi" )
+datasets=("SMALL" "MEDIUM" "LARGE")
 
 # Define the number of repetitions
 repetitions=1

@@ -3,6 +3,7 @@
 #include <math.h>
 #include <argp.h>
 #include <string.h>
+#include <sys/time.h>
 
 #include <common.h>
 
@@ -84,6 +85,13 @@ print_grid(double a[N * N])
         fprintf(stdout, "\n");  
     }
     fprintf(stdout, "\n");
+}
+
+/* Timing function. */
+float
+time_diff(struct timeval *start, struct timeval *end)
+{
+    return (end->tv_sec - start->tv_sec) + 1e-6 * (end->tv_usec - start->tv_usec);
 }
 
 /* Program version. */
