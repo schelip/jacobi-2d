@@ -8,39 +8,79 @@
 
 /* Array initialization. */
 void
-init_array_with_copy(double A[N][N], double B[N][N])
+init_array_with_copy(double a[N][N], double b[N][N])
 {
     int i, j;
 
     for (i = 0; i < N; i++)
         for (j = 0; j < N; j++)
         {
-            A[i][j] = roundf((MAX_VALUE * ((double)rand()) / RAND_MAX) * 100) / 100;
-            B[i][j] = A[i][j];
+            a[i][j] = roundf((MAX_VALUE * ((double)rand()) / RAND_MAX) * 100) / 100;
+            b[i][j] = a[i][j];
         }
 }
 
 /* Array initialization. */
 void
-init_array(double A[N][N])
+init_array(double a[N][N])
 {
     int i, j;
 
     for (i = 0; i < N; i++)
         for (j = 0; j < N; j++)
-            A[i][j] = roundf((MAX_VALUE * ((double)rand()) / RAND_MAX) * 100) / 100;
+            a[i][j] = roundf((MAX_VALUE * ((double)rand()) / RAND_MAX) * 100) / 100;
+}
+
+/* Grid initialization. */
+void
+init_grid_with_copy(double a[N * N], double b[N * N])
+{
+    int i, j;
+
+    for (i = 0; i < N; i++)
+        for (j = 0; j < N; j++)
+        {
+            a EL(i, j) = roundf((MAX_VALUE * ((double)rand()) / RAND_MAX) * 100) / 100;
+            b EL(i, j) = a EL(i, j);
+        }
+}
+
+/* Grid initialization. */
+void
+init_grid(double a[N * N])
+{
+    int i, j;
+
+    for (i = 0; i < N; i++)
+        for (j = 0; j < N; j++)
+            a EL(i, j) = roundf((MAX_VALUE * ((double)rand()) / RAND_MAX) * 100) / 100;
 }
 
 /* Prints array values. */
 void
-print_array(double A[N][N])
+print_array(double a[N][N])
 {
     int i, j;
 
     for (i = 0; i < N; i++)
     {
         for (j = 0; j < N; j++)
-            fprintf(stdout, "%0.2lf\t", A[i][j]);
+            fprintf(stdout, "%0.2lf\t", a[i][j]);
+        fprintf(stdout, "\n");  
+    }
+    fprintf(stdout, "\n");
+}
+
+/* Prints grid values. */
+void
+print_grid(double a[N * N])
+{
+    int i, j;
+
+    for (i = 0; i < N; i++)
+    {
+        for (j = 0; j < N; j++)
+            fprintf(stdout, "%0.2lf\t", a EL(i, j));
         fprintf(stdout, "\n");  
     }
     fprintf(stdout, "\n");

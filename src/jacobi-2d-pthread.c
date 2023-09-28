@@ -9,37 +9,36 @@
 /* Shared variables between all threads */
 static pthread_barrier_t barrier;
 static int tsteps, num_threads, chunk_size;
-static double grid[2][N][N];
+
+DECLARE_GRIDS()
 
 /* Worker function. Calculates final elements in a certain chunk of rows. */
 static void *
 jacobi_2d_worker_pthread(void* arg)
 {
-    int t, i, j, thread_id, start_row, end_row, to, from;
+    int t, i, j, thread_id, start_row, end_row;
 
     thread_id = *((int*)arg);
     start_row = 1 + thread_id * chunk_size;
     end_row = (thread_id == num_threads - 1) ? (N - 1) : (start_row + chunk_size);
-    to = 0;
-    from = 1;
+
+    PREPARE_GRIDS()
 
     for (t = 0; t < tsteps; t++)
     {
         /* Calculate one iteration of the chunk. */
         for (i = start_row; i < end_row; i++)
             for (j = 1; j < N - 1; j++)
-                grid[to][i][j] = 0.2 * (grid[from][i][j] + grid[from][i][j - 1] + grid[from][i][1 + j] + grid[from][1 + i][j] + grid[from][i - 1][j]);
+                B EL(i, j) = 0.2 * (A EL(i, j) + A EL(i, j - 1) + A EL(i, 1 + j) + A EL(1 + i, j) + A EL(i - 1, j));
         pthread_barrier_wait(&barrier);
-
-        /* Swap grids. */
-        from = to;
-        to = 1 - to;
 
         if (thread_id == DEBUG_THREAD && DEBUG)
         {
             printf("Iter %d\n", t);
-            print_array(grid[from]);
+            print_grid(B);
         }
+
+        SWAP_GRIDS()
     }
 
     return (void*)NULL;
@@ -55,7 +54,8 @@ jacobi_2d_pthread(int seed) {
 
     /* Initialize array(s). */
     srand(seed);
-    init_array_with_copy(grid[0], grid[1]);
+    init_grid_with_copy(INITIAL_GRID, AUX_GRID);
+    print_grid(INITIAL_GRID);
 
     /* Initialize threads and barrier. */
     threads = (pthread_t*)malloc(num_threads * sizeof(pthread_t));
@@ -95,7 +95,7 @@ jacobi_2d_pthread(int seed) {
     pthread_barrier_destroy(&barrier);
 
     if (DEBUG)
-        print_array(grid[1 - tsteps % 2]); // If even tsteps, result will be in grid[1]
+        print_grid(RESULT_GRID);
 }
 
 /* The options we understand. */

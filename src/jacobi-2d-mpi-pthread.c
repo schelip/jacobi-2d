@@ -12,7 +12,7 @@
 static pthread_barrier_t sync_barrier, calc_barrier;
 static int rank, tsteps, num_workers, num_threads,
     chunk_size, strip_size, start_row, end_row;
-static double A[N][N], B[N][N];
+static double a[N][N], b[N][N];
 
 /* Calculates the first and last row indexes for the chunk of a given rank. */
 static void
@@ -40,19 +40,19 @@ jacobi_2d_worker_pthread(void* arg)
         /* Calculate one iteration of the strip. */
         for (i = start_row; i <= end_row; i++)
             for (j = start_col; j <= end_col; j++)
-                B[i][j] = 0.2 * (A[i][j] + A[i][j - 1] + A[i][1 + j] + A[1 + i][j] + A[i - 1][j]);
+                b[i][j] = 0.2 * (a[i][j] + a[i][j - 1] + a[i][1 + j] + a[1 + i][j] + a[i - 1][j]);
         pthread_barrier_wait(&calc_barrier);
 
         /* Update matrix. */
         for (i = start_row; i <= end_row; i++)
             for (j = start_col; j <= end_col; j++)
-                A[i][j] = B[i][j];
+                a[i][j] = b[i][j];
         pthread_barrier_wait(&sync_barrier);
 
         if (thread_id == DEBUG_THREAD && rank == DEBUG_RANK && DEBUG)
         {
             printf("Iter %d\n", t);
-            print_array(A);
+            print_array(a);
         }
     }
 
@@ -77,12 +77,12 @@ jacobi_2d_worker_mpi()
 
     /* If it is the max rank, it must receive the bottom row. */
     if (!neigh_below && rank)
-        MPI_Recv(&A[N - 1][0], N, MPI_DOUBLE, 0, TAG, MPI_COMM_WORLD, &status);
+        MPI_Recv(&a[N - 1][0], N, MPI_DOUBLE, 0, TAG, MPI_COMM_WORLD, &status);
 
     /* Receive initial chunk values from root. */
     if (rank)
         for (i = start_row; i <= end_row; i++)
-            MPI_Recv(&A[i][0], N, MPI_DOUBLE, 0, TAG, MPI_COMM_WORLD, &status);
+            MPI_Recv(&a[i][0], N, MPI_DOUBLE, 0, TAG, MPI_COMM_WORLD, &status);
 
     /* Initialize threads and barriers. */
     threads = (pthread_t*)malloc(num_threads * sizeof(pthread_t));
@@ -117,14 +117,14 @@ jacobi_2d_worker_mpi()
     {
         /* Share borders with neighbors above and below. */
         if (rank)
-            MPI_Recv(&A[start_row - 1][0], N, MPI_DOUBLE, neigh_above, TAG, MPI_COMM_WORLD, &status);
+            MPI_Recv(&a[start_row - 1][0], N, MPI_DOUBLE, neigh_above, TAG, MPI_COMM_WORLD, &status);
         if (neigh_below)
         {
-            MPI_Send(&A[end_row][0], N, MPI_DOUBLE, neigh_below, TAG, MPI_COMM_WORLD);
-            MPI_Recv(&A[end_row + 1][0], N, MPI_DOUBLE, neigh_below, TAG, MPI_COMM_WORLD, &status);
+            MPI_Send(&a[end_row][0], N, MPI_DOUBLE, neigh_below, TAG, MPI_COMM_WORLD);
+            MPI_Recv(&a[end_row + 1][0], N, MPI_DOUBLE, neigh_below, TAG, MPI_COMM_WORLD, &status);
         }
         if (rank)
-            MPI_Send(&A[start_row][0], N, MPI_DOUBLE, neigh_above, TAG, MPI_COMM_WORLD);
+            MPI_Send(&a[start_row][0], N, MPI_DOUBLE, neigh_above, TAG, MPI_COMM_WORLD);
 
         /* Signal to threads that borders have been updated. */
         pthread_barrier_wait(&sync_barrier);
@@ -147,7 +147,7 @@ jacobi_2d_worker_mpi()
     /* Send final chunk values from root. */
     if (rank)
         for (i = start_row; i <= end_row; i++)
-            MPI_Send(&A[i][1], N - 1, MPI_DOUBLE, 0, TAG, MPI_COMM_WORLD);
+            MPI_Send(&a[i][1], N - 1, MPI_DOUBLE, 0, TAG, MPI_COMM_WORLD);
 }
 
 /* Coordinator function. Initializes array, then share work between workers and also do work itself. */
@@ -159,23 +159,23 @@ jacobi_2d_coordinator_mpi(int seed)
 
     /* Initialize array(s). */
     srand(seed);
-    init_array(A);
+    init_array(a);
         
     if (DEBUG)
-        print_array(A);
+        print_array(a);
 
     MPI_Status status;
 
     /* Send bottom row to max rank worker. */
     if (num_workers)
-        MPI_Send(&A[N - 1][0], N, MPI_DOUBLE, num_workers, TAG, MPI_COMM_WORLD);
+        MPI_Send(&a[N - 1][0], N, MPI_DOUBLE, num_workers, TAG, MPI_COMM_WORLD);
 
     /* Send initial values of chunks to workers. */ 
     for (worker = 1; worker <= num_workers; worker++)
     {
         get_limits(worker, chunk_size, num_workers, &worker_start_row, &worker_end_row);
         for (i = worker_start_row; i <= worker_end_row; i++)
-            MPI_Send(&A[i][0], N, MPI_DOUBLE, worker, TAG, MPI_COMM_WORLD);
+            MPI_Send(&a[i][0], N, MPI_DOUBLE, worker, TAG, MPI_COMM_WORLD);
     }
 
     jacobi_2d_worker_mpi(0);
@@ -185,11 +185,11 @@ jacobi_2d_coordinator_mpi(int seed)
     {
         get_limits(worker, chunk_size, num_workers, &worker_start_row, &worker_end_row);
         for (i = worker_start_row; i <= worker_end_row; i++)
-            MPI_Recv(&A[i][1], N - 1, MPI_DOUBLE, worker, TAG, MPI_COMM_WORLD, &status);
+            MPI_Recv(&a[i][1], N - 1, MPI_DOUBLE, worker, TAG, MPI_COMM_WORLD, &status);
     }
 
     if (DEBUG)
-        print_array(A);
+        print_array(a);
 }
 
 /* The options we understand. */

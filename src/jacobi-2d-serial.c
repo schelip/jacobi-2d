@@ -6,27 +6,28 @@
 #include <common.h>
 
 /* Variable declaration. */
-static double A[N][N], B[N][N];
+DECLARE_GRIDS()
 
 /* Main computational kernel. */
 static void
 kernel_jacobi_2d_serial(int tsteps) {
     int t, i, j;
 
+    PREPARE_GRIDS()
+
     for (t = 0; t < tsteps; t++)
     {
         for (i = 1; i < N - 1; i++)
 	        for (j = 1; j < N - 1; j++)
-	            B[i][j] = 0.2 * (A[i][j] + A[i][j - 1] + A[i][1 + j] + A[1 + i][j] + A[i - 1][j]);
-        for (i = 1; i < N-1; i++)
-	        for (j = 1; j < N - 1; j++)
-	            A[i][j] = B[i][j];
+	            B EL(i, j) = 0.2 * (A EL(i, j) + A EL(i, j - 1) + A EL(i, 1 + j) + A EL(1 + i, j) + A EL(i - 1, j));
 
         if (DEBUG)
         {
             printf("Iter %d\n", t);
-            print_array(A);
+            print_grid(B);
         }
+
+        SWAP_GRIDS()
     }
 }
 
@@ -34,13 +35,17 @@ static void
 jacobi_2d_serial(int tsteps, int seed) {
     /* Initialize array(s). */
     srand(seed);
-    init_array_with_copy(A, B);
+
+    init_grid_with_copy(INITIAL_GRID, AUX_GRID);
+
+    if (DEBUG)
+        print_grid(INITIAL_GRID);
 
     /* Run kernel. */
     kernel_jacobi_2d_serial(tsteps);
 
     if (DEBUG)
-        print_array(A);
+        print_grid(RESULT_GRID);
 }
 
 /* The options we understand. */
