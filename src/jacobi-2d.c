@@ -1,11 +1,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
-#include <argp.h>
 #include <string.h>
+
+#include <argp.h>
 #include <sys/time.h>
 
-#include <common.h>
+#include <jacobi-2d.h>
 
 /* Array initialization. */
 void
@@ -85,6 +86,14 @@ print_grid(double a[N * N])
         fprintf(stdout, "\n");  
     }
     fprintf(stdout, "\n");
+}
+
+/* Calculates the first and last row indexes for the chunk of a given rank. */
+void
+get_limits(int rank, int chunk_size, int n_workers, int *start_row, int *end_row)
+{
+    *start_row = 1 + rank * chunk_size;
+    *end_row = (rank == n_workers - 1) ? (N - 2) : (*start_row + chunk_size) - 1;
 }
 
 /* Timing function. */

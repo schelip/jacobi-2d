@@ -8,7 +8,7 @@ rm "$output_file"
 echo "PROGRAM,DATASET,THREADS,PROCESSES,PARALLEL_TIME,SPEEDUP" >> "$output_file"
 
 # Define the executable programs and dataset sizes
-programs=("pthread" "mpi" )
+programs=("pthread" "mpi" "mpi-pthread")
 datasets=("SMALL" "MEDIUM" "LARGE")
 
 # Define the number of repetitions
@@ -36,11 +36,11 @@ calculate_speedup() {
     # Execute the parallel program and calculate the average time
     for ((i=1; i<=$repetitions; i++)); do
         if [ "$program" == "pthread" ]; then
-            parallel_time=$(echo "$(env time -f "%e" bin/jacobi-2d-$program -d $dataset -t $threads 2>&1)" | bc -l)
+            parallel_time=$(echo "$(bin/jacobi-2d-pthread -d $dataset -t $threads)" | bc -l)
         elif [ "$program" == "mpi" ]; then
-            parallel_time=$(echo "$(env time -f "%e" mpirun -np $processes bin/jacobi-2d-$program -d $dataset 2>&1)" | bc -l)
+            parallel_time=$(echo "$(mpirun -np $processes bin/jacobi-2d-mpi -d $dataset)" | bc -l)
         else
-            parallel_time=$(echo "$(env time -f "%e" mpirun -np $processes bin/jacobi-2d-$program -d $dataset -t $threads 2>&1)" | bc -l)
+            parallel_time=$(echo "$(mpirun -np $processes bin/jacobi-2d-mpi-pthread -d $dataset -t $threads)" | bc -l)
         fi
         echo "jacobi-2d-$program $dataset execution $i time: $parallel_time"
         parallel_time_sum=$(echo "$parallel_time_sum + $parallel_time" | bc -l)

@@ -1,11 +1,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+
 #include <pthread.h>
 #include <argp.h>
 #include <sys/time.h>
 
-#include <common.h>
+#include <jacobi-2d.h>
 
 /* Shared variables between all threads */
 static pthread_barrier_t barrier;
@@ -20,15 +21,14 @@ jacobi_2d_worker_pthread(void* arg)
     int t, i, j, thread_id, start_row, end_row;
 
     thread_id = *((int*)arg);
-    start_row = 1 + thread_id * chunk_size;
-    end_row = (thread_id == num_threads - 1) ? (N - 1) : (start_row + chunk_size);
+    get_limits(thread_id, chunk_size, num_threads, &start_row, &end_row);
 
     PREPARE_GRIDS
 
     for (t = 0; t < tsteps; t++)
     {
         /* Calculate one iteration of the chunk. */
-        for (i = start_row; i < end_row; i++)
+        for (i = start_row; i <= end_row; i++)
             for (j = 1; j < N - 1; j++)
                 B EL(i, j) = 0.2 * (A EL(i, j) + A EL(i, j - 1) + A EL(i, 1 + j) + A EL(1 + i, j) + A EL(i - 1, j));
         pthread_barrier_wait(&barrier);

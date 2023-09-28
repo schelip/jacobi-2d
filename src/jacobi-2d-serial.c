@@ -4,7 +4,7 @@
 #include <argp.h>
 #include <sys/time.h>
 
-#include <common.h>
+#include <jacobi-2d.h>
 
 /* Variable declaration. */
 DECLARE_GRIDS

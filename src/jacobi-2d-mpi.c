@@ -1,25 +1,17 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include<string.h>
+
 #include <mpi.h>
 #include <argp.h>
 
-#define MPI 1
-
-#include <common.h>
+#include <jacobi-2d.h>
 
 static int rank, tsteps, num_workers, chunk_size, start_row, end_row;
 
 DECLARE_GRIDS
 PREPARE_GRIDS
-
-/* Calculates the first and last row indexes for the chunk of a given rank. */
-static void
-get_limits(int rank, int chunk_size, int n_workers, int *start_row, int *end_row)
-{
-    *start_row = 1 + rank * chunk_size;
-    *end_row = (rank == n_workers) ? (N - 2) : (*start_row + chunk_size) - 1;
-}
 
 /* Worker function. Receives chunk from the root and calculate final values. */
 static void
@@ -27,21 +19,19 @@ jacobi_2d_worker_mpi()
 {
     /* Variable declaration. */
     int t, i, j, neigh_above, neigh_below;
+    MPI_Status status;
     
     /* Get chunk limits for worker rank. */
     get_limits(rank, chunk_size, num_workers, &start_row, &end_row);
 
     neigh_above = rank - 1;
-    neigh_below = rank == num_workers ? 0 : rank + 1;
-
-    MPI_Status status;
+    neigh_below = rank == num_workers - 1 ? 0 : rank + 1;
 
     /* If it is the max rank, it must receive the bottom row. */
     if (!neigh_below && rank)
     {
         MPI_Recv(&INITIAL_GRID EL(N - 1, 0), N, MPI_DOUBLE, 0, TAG, MPI_COMM_WORLD, &status);
-        for (i = 1; i < N - 1; i++)
-            AUX_GRID EL(N - 1, i) = INITIAL_GRID EL(N - 1, i);
+        memcpy(&AUX_GRID EL(N - 1, 1), &INITIAL_GRID EL(N - 1, 1), sizeof(double) * (N - 2));
     }
 
     /* Receive initial chunk values from root. */
@@ -110,7 +100,7 @@ jacobi_2d_coordinator_mpi(int seed)
 
     /* Send bottom row to max rank worker .*/
     if (num_workers)
-        MPI_Send(&INITIAL_GRID EL(N - 1, 0), N, MPI_DOUBLE, num_workers, TAG, MPI_COMM_WORLD);
+        MPI_Send(&INITIAL_GRID EL(N - 1, 0), N, MPI_DOUBLE, num_workers - 1, TAG, MPI_COMM_WORLD);
 
     jacobi_2d_worker_mpi(0);
 
@@ -129,7 +119,7 @@ struct argp_option options[] =
 int
 main(int argc, char *argv[])
 {
-    START_TIMER
+    START_TIMER_MPI
 
     int seed = 1;
     MPI_Init(&argc, &argv);
@@ -137,7 +127,6 @@ main(int argc, char *argv[])
     MPI_Comm_size(MPI_COMM_WORLD, &num_workers);
     
     chunk_size = (N - 2) / num_workers;
-    num_workers--;
 
     if (!rank)
     {
@@ -157,8 +146,10 @@ main(int argc, char *argv[])
     else
         jacobi_2d_worker_mpi();
 
-    STOP_TIMER
 
     MPI_Finalize();
+
+    STOP_TIMER_MPI
+
     exit(EXIT_SUCCESS);
 }

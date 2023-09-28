@@ -22,7 +22,7 @@ Para compilar, é possível utilizar o makefile. Os binários serão gerados na 
 $ make
 ```
 
-Alguns parâmetros, como tamanho da matriz e a flag de debug, devem ser alterados diretamente no [headerfile](src/common.h). Para recompilar:
+Alguns parâmetros, como tamanho da matriz e a flag de debug, devem ser alterados diretamente no [headerfile](src/jacobi-2d.h). Para recompilar:
 
 ```bash
 $ make clean
