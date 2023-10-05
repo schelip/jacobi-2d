@@ -3,7 +3,7 @@ CC = gcc
 MPICC = mpicc
 
 # Flags
-CFLAGS = -Wall -O3
+CFLAGS = -Wall
 LFLAGS = -lm
 
 # Directories
