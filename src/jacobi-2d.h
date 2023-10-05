@@ -2,8 +2,8 @@
 #define JACOBI_2D_H
 
 /* Dataset sizes. */
-#define N 10000
-#define SMALL_DATASET 120
+#define N 10
+#define SMALL_DATASET 4
 #define MEDIUM_DATASET 240
 #define LARGE_DATASET 480
 
@@ -12,9 +12,9 @@
 #define TAG 0
 
 /* Debug config. */
-#define DEBUG 0
+#define DEBUG 1
 #define DEBUG_THREAD -1
-#define DEBUG_RANK 3
+#define DEBUG_RANK 1
 
 /* Grid macros and functions. */
 #define EL(i, j) [((i) * N) + (j)]

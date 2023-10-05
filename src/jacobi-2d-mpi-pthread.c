@@ -9,7 +9,11 @@
 
 #include <jacobi-2d.h>
 
-static pthread_barrier_t sync_barrier, calc_barrier;
+static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
+static pthread_barrier_t sync_barrier;
+static int syncs_counter = 0;
+
 static int rank, tsteps, num_workers, num_threads,
     chunk_size, strip_size, start_row, end_row;
 
@@ -28,7 +32,10 @@ jacobi_2d_worker_pthread(void* arg)
     for (t = 0; t < tsteps; t++)
     {
         /* Wait for main thred to update borders. */
-        pthread_barrier_wait(&sync_barrier);
+        pthread_mutex_lock(&mutex);
+        if (syncs_counter <= t)
+            pthread_cond_wait(&cond, &mutex);
+        pthread_mutex_unlock(&mutex);
 
         /* Calculate one iteration of the strip. */
         for (i = start_row; i <= end_row; i++)
@@ -89,7 +96,6 @@ jacobi_2d_worker_mpi()
     }
 
     pthread_barrier_init(&sync_barrier, NULL, num_threads + 1);
-    pthread_barrier_init(&calc_barrier, NULL, num_threads);
 
     /* Dispatch threads. */
     for (i = 0; i < num_threads; i++)
@@ -130,7 +136,8 @@ jacobi_2d_worker_mpi()
         }
 
         /* Signal to threads that borders have been updated. */
-        pthread_barrier_wait(&sync_barrier);
+        syncs_counter++;
+        pthread_cond_broadcast(&cond);
 
         /* Wait for threads to finish calculating iteration and updating matrix. */
         pthread_barrier_wait(&sync_barrier);
@@ -153,7 +160,8 @@ jacobi_2d_worker_mpi()
         };
     
     pthread_barrier_destroy(&sync_barrier);
-    pthread_barrier_destroy(&calc_barrier);
+    pthread_mutex_destroy(&mutex);
+    pthread_cond_destroy(&cond);
 
     /* Send final chunk values from root. */
     MPI_Gather(
