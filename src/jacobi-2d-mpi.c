@@ -8,6 +8,8 @@
 
 #include <jacobi-2d.h>
 
+ARG_OPTIONS
+
 static int rank, tsteps, num_workers, chunk_size, start_row, end_row;
 
 DECLARE_GRIDS
@@ -89,10 +91,9 @@ jacobi_2d_worker_mpi()
 
 /* Coordinator function. Initializes array, then share work between workers and also do work itself. */
 static void
-jacobi_2d_coordinator_mpi(int seed)
+jacobi_2d_coordinator_mpi()
 {
     /* Initialize array(s). */
-    srand(seed);
     init_grid_with_copy(INITIAL_GRID, AUX_GRID);
         
     if (DEBUG)
@@ -108,32 +109,24 @@ jacobi_2d_coordinator_mpi(int seed)
         print_grid(RESULT_GRID);
 }
 
-/* The options we understand. */
-struct argp_option options[] =
-{
-    { "size", 'd', "SIZE", 0, "Dataset size option (SMALL, MEDIUM, LARGE) - defines the number of iterations for the computation", 0 },
-    { "seed", 's', "SEED", 0, "Seed for the array initialization", 0 },
-    { 0 }
-};
-
 int
 main(int argc, char *argv[])
 {
     START_TIMER_MPI
 
-    int seed = 1;
+    struct arguments arguments;
+
     MPI_Init(&argc, &argv);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &num_workers);
     
     chunk_size = (N - 2) / num_workers;
 
-    if (!rank)
+    if (rank == 0)
     {
-        struct arguments arguments;
         parse_args(argc, argv, &arguments);
         tsteps = arguments.size;
-        seed = arguments.seed;
+        srand(arguments.seed);
     }
     
     /* Syncronize parameters read by root. */
@@ -141,8 +134,8 @@ main(int argc, char *argv[])
     MPI_Bcast(&num_workers, 1, MPI_INT, 0, MPI_COMM_WORLD);
     MPI_Bcast(&chunk_size, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
-    if (!rank)
-        jacobi_2d_coordinator_mpi(seed);
+    if (rank == 0)
+        jacobi_2d_coordinator_mpi();
     else
         jacobi_2d_worker_mpi();
 
@@ -150,6 +143,14 @@ main(int argc, char *argv[])
     MPI_Finalize();
 
     STOP_TIMER_MPI
+    
+    if (rank == 0)
+    {
+        if (arguments.print_result)
+            print_grid(RESULT_GRID);
+        else
+            PRINT_EXEC_TIME
+    }
 
     exit(EXIT_SUCCESS);
 }

@@ -3,7 +3,7 @@
 make clean
 make
 
-output_file="speedup_results.csv"
+output_file="out/speedup_results.csv"
 rm "$output_file"
 echo "PROGRAM,DATASET,N,PARALLEL_TIME,SPEEDUP" >> "$output_file"
 
@@ -79,11 +79,15 @@ for dataset in "${datasets[@]}"; do
     for n in "${ns[@]}"; do
         calculate_speedup "pthread" "$dataset" "$n"
     done
+done
 
+for dataset in "${datasets[@]}"; do
     for n in "${ns[@]}"; do
         calculate_speedup "mpi" "$dataset" "$n"
     done
+done
 
+for dataset in "${datasets[@]}"; do
     for n in "${ns[@]}"; do
         calculate_speedup "mpi-pthread" "$dataset" "$n"
     done

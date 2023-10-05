@@ -9,6 +9,8 @@
 
 #include <jacobi-2d.h>
 
+THREAD_ARG_OPTIONS
+
 static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
 static pthread_barrier_t sync_barrier;
@@ -136,8 +138,10 @@ jacobi_2d_worker_mpi()
         }
 
         /* Signal to threads that borders have been updated. */
+        pthread_mutex_lock(&mutex);
         syncs_counter++;
         pthread_cond_broadcast(&cond);
+        pthread_mutex_unlock(&mutex);
 
         /* Wait for threads to finish calculating iteration and updating matrix. */
         pthread_barrier_wait(&sync_barrier);
@@ -172,10 +176,9 @@ jacobi_2d_worker_mpi()
 
 /* Coordinator function. Initializes array, then share work between workers and also do work itself. */
 static void
-jacobi_2d_coordinator_mpi(int seed)
+jacobi_2d_coordinator_mpi()
 {
     /* Initialize array(s). */
-    srand(seed);
     init_grid_with_copy(INITIAL_GRID, AUX_GRID);
         
     if (DEBUG)
@@ -191,21 +194,13 @@ jacobi_2d_coordinator_mpi(int seed)
         print_grid(RESULT_GRID);
 }
 
-/* The options we understand. */
-struct argp_option options[] =
-{
-    { "size", 'd', "SIZE", 0, "Dataset size option (SMALL, MEDIUM, LARGE) - defines the number of iterations for the computation", 0 },
-    { "threads", 't', "THREADS", 0, "Number of threads for the parallel computation", 0 },
-    { "seed", 's', "SEED", 0, "Seed for the array initialization", 0 },
-    { 0 }
-};
-
 int
 main(int argc, char *argv[])
 {
     START_TIMER_MPI
 
-    int seed = 1, provided;
+    int provided;
+    struct arguments arguments;
 
     MPI_Init_thread(&argc, &argv, MPI_THREAD_FUNNELED, &provided); 
     if(provided != MPI_THREAD_FUNNELED) 
@@ -221,11 +216,10 @@ main(int argc, char *argv[])
 
     if (!rank)
     {
-        struct arguments arguments;
         parse_args(argc, argv, &arguments);
         tsteps = arguments.size;
-        seed = arguments.seed;
         num_threads = arguments.threads;
+        srand(arguments.seed);
         strip_size = (N - 2) / num_threads;
     }
     
@@ -235,13 +229,21 @@ main(int argc, char *argv[])
     MPI_Bcast(&strip_size, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
     if (!rank)
-        jacobi_2d_coordinator_mpi(seed);
+        jacobi_2d_coordinator_mpi();
     else
         jacobi_2d_worker_mpi();
 
     MPI_Finalize();
 
     STOP_TIMER_MPI
+
+    if (rank == 0)
+    {
+        if (arguments.print_result)
+            print_grid(RESULT_GRID);
+        else
+            PRINT_EXEC_TIME
+    }
 
     exit(EXIT_SUCCESS);
 }

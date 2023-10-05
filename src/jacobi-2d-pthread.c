@@ -8,7 +8,9 @@
 
 #include <jacobi-2d.h>
 
-/* Shared variables between all threads */
+THREAD_ARG_OPTIONS
+
+/* Variable declaration (shared variables between all threads). */
 static pthread_barrier_t barrier;
 static int tsteps, num_threads, chunk_size;
 
@@ -47,14 +49,13 @@ jacobi_2d_worker_pthread(void* arg)
 
 /* Main thread. Dispatches worker threads. */
 static void
-jacobi_2d_pthread(int seed) {
+jacobi_2d_pthread() {
     int i, *thread_id;
     pthread_t *threads;
 
     chunk_size = (N - 2) / num_threads;
 
     /* Initialize array(s). */
-    srand(seed);
     init_grid_with_copy(INITIAL_GRID, AUX_GRID);
     
     if (DEBUG)
@@ -101,15 +102,6 @@ jacobi_2d_pthread(int seed) {
         print_grid(RESULT_GRID);
 }
 
-/* The options we understand. */
-struct argp_option options[] =
-{
-    { "size", 'd', "SIZE", 0, "Dataset size option (SMALL, MEDIUM, LARGE) - defines the number of iterations for the computation", 0 },
-    { "threads", 't', "THREADS", 0, "Number of threads for the parallel computation", 0 },
-    { "seed", 's', "SEED", 0, "Seed for the array initialization", 0 },
-    { 0 }
-};
-
 int
 main(int argc, char *argv[])
 {
@@ -117,11 +109,19 @@ main(int argc, char *argv[])
 
     struct arguments arguments;
     parse_args(argc, argv, &arguments);
+
     tsteps = arguments.size;
     num_threads = arguments.threads;
-    jacobi_2d_pthread(arguments.seed);
+    srand(arguments.seed);
+
+    jacobi_2d_pthread();
 
     STOP_TIMER
+
+    if (arguments.print_result)
+        print_grid(RESULT_GRID);
+    else
+        PRINT_EXEC_TIME
 
     exit(EXIT_SUCCESS);
 }

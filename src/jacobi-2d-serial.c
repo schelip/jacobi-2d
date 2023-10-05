@@ -6,7 +6,11 @@
 
 #include <jacobi-2d.h>
 
+ARG_OPTIONS
+
 /* Variable declaration. */
+static int tsteps;
+
 DECLARE_GRIDS
 
 /* Main computational kernel. */
@@ -33,9 +37,8 @@ kernel_jacobi_2d_serial(int tsteps) {
 }
 
 static void
-jacobi_2d_serial(int tsteps, int seed) {
+jacobi_2d_serial() {
     /* Initialize array(s). */
-    srand(seed);
 
     init_grid_with_copy(INITIAL_GRID, AUX_GRID);
 
@@ -49,23 +52,25 @@ jacobi_2d_serial(int tsteps, int seed) {
         print_grid(RESULT_GRID);
 }
 
-/* The options we understand. */
-struct argp_option options[] =
-{
-    {"size", 'd', "SIZE", 0, "Dataset size option (SMALL, MEDIUM, LARGE) - defines the number of iterations for the computation", 0},
-    {"seed", 's', "SEED", 0, "Seed for the array initialization", 0},
-    {0}
-};
-
 int
-main(int argc, char *argv[]) {
+main(int argc, char *argv[])
+{
     START_TIMER
 
     struct arguments arguments;
     parse_args(argc, argv, &arguments);
-    jacobi_2d_serial(arguments.size, arguments.seed);
+
+    tsteps = arguments.size;
+    srand(arguments.seed);
+
+    jacobi_2d_serial();
 
     STOP_TIMER
     
+    if (arguments.print_result)
+        print_grid(RESULT_GRID);
+    else
+        PRINT_EXEC_TIME
+
     exit(EXIT_SUCCESS);
 }

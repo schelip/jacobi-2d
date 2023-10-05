@@ -3,13 +3,19 @@
 make clean
 make
 
-output_file="perf_results.csv"
+output_file="out/perf_results.csv"
 rm "$output_file"
 echo "PROGRAM,DATASET,N,CPU_CLOCK,TASK_CLOCK,CONTEXT_SWITCHES,CPU_MIGRATIONS,PAGE_FAULTS,BRANCHES,BRANCH_MISSES,CACHE_REFERENCES,CACHE_MISSES,CYCLES,INSTRUCTIONS" >> "$output_file"
 
 # Define the executable programs and dataset sizes
 datasets=("SMALL")
 ns=(2 4 8 16)
+
+# Path where the perf binary is
+perf_path="./ext/perf"
+
+# Define the number of repetitions
+repetitions=10
 
 # Function to execute perf stat and save the results to the CSV file
 execute_perf_stat() {
@@ -20,7 +26,9 @@ execute_perf_stat() {
     echo "Running perf stat for jacobi-2d-$program with dataset $dataset and $n threads/processes..."
 
     # Define the command to execute based on the program type
-    if [ "$program" == "pthread" ]; then
+    if [ "$program" == "serial" ]; then
+        command="bin/jacobi-2d-serial -d $dataset"
+    elif [ "$program" == "pthread" ]; then
         command="bin/jacobi-2d-pthread -d $dataset -t $n"
     elif [ "$program" == "mpi" ]; then
         command="mpirun --hostfile hostfile -np $n bin/jacobi-2d-mpi -d $dataset"
@@ -29,7 +37,7 @@ execute_perf_stat() {
     fi
 
     # Execute perf stat and capture the results
-    perf_result=$(perf stat -e cpu-clock,task-clock,context-switches,cpu-migrations,page-faults,branches,branch-misses,cache-references,cache-misses,cycles,instructions $command 2>&1)
+    perf_result=$($perf_path/perf stat -r 10 -e cpu-clock,task-clock,context-switches,cpu-migrations,page-faults,branches,branch-misses,cache-references,cache-misses,cycles,instructions $command 2>&1)
 
     # Extract the relevant metrics from the perf stat output
     cpu_clock=$(echo "$perf_result" | grep "cpu-clock" | awk '{print $1}')
@@ -52,14 +60,22 @@ execute_perf_stat() {
 
 # Loop through all programs, datasets, and thread/process counts
 for dataset in "${datasets[@]}"; do
+    execute_perf_stat "serial" "$dataset" "1"
+done
+
+for dataset in "${datasets[@]}"; do
     for n in "${ns[@]}"; do
         execute_perf_stat "pthread" "$dataset" "$n"
     done
+done
 
+for dataset in "${datasets[@]}"; do
     for n in "${ns[@]}"; do
         execute_perf_stat "mpi" "$dataset" "$n"
     done
+done
 
+for dataset in "${datasets[@]}"; do
     for n in "${ns[@]}"; do
         execute_perf_stat "mpi-pthread" "$dataset" "$n"
     done

@@ -2,19 +2,22 @@
 #define JACOBI_2D_H
 
 /* Dataset sizes. */
-#define N 10
-#define SMALL_DATASET 4
+#define N 1000
+#define SMALL_DATASET 120
 #define MEDIUM_DATASET 240
 #define LARGE_DATASET 480
+
 
 /* Constants. */
 #define MAX_VALUE 15
 #define TAG 0
 
+
 /* Debug config. */
-#define DEBUG 1
+#define DEBUG 0
 #define DEBUG_THREAD -1
-#define DEBUG_RANK 1
+#define DEBUG_RANK -1
+
 
 /* Grid macros and functions. */
 #define EL(i, j) [((i) * N) + (j)]
@@ -29,21 +32,40 @@
 #define SWAP_GRIDS current = next; next = 1 - next;
 #define PREPARE_GRIDS int current = 0, next = 1;
 
-extern void init_array(double a[N][N]);
-extern void init_array_with_copy(double a[N][N], double b[N][N]);
-extern void print_array(double a[N][N]);
 extern void init_grid(double a[N * N]);
 extern void init_grid_with_copy(double a[N * N], double b[N * N]);
 extern void print_grid(double a[N * N]);
 extern void get_limits(int rank, int chunk_size, int n_workers, int *start_row, int *end_row);
 
+
 /* Timing macros and functions. */
 #define START_TIMER_MPI double start, end; start = MPI_Wtime();
-#define STOP_TIMER_MPI end = MPI_Wtime(); if (rank == 0) printf("%0.8f\n", end - start);
+#define STOP_TIMER_MPI end = MPI_Wtime(); float exec_time = end - start;
 
 #define START_TIMER struct timeval start, end; gettimeofday(&start, NULL);
-#define STOP_TIMER gettimeofday(&end, NULL); printf("%0.8f\n", time_diff(&start, &end));
+#define STOP_TIMER gettimeofday(&end, NULL); float exec_time = time_diff(&start, &end);
 extern float time_diff(struct timeval *start, struct timeval *end);
+
+#define PRINT_EXEC_TIME printf("%0.8f\n", exec_time);
+
+
+/* Argument parsing */
+#define THREAD_ARG_OPTIONS struct argp_option options[] = \
+    { \
+        {"size", 'd', "SIZE", 0, "Dataset size option (SMALL, MEDIUM, LARGE) - defines the number of iterations for the computation", 0}, \
+        {"seed", 's', "SEED", 0, "Seed for the array initialization", 0}, \
+        {"print-result", 'p', NULL, 0, "If present, will print the result of the computation; if not, will print execution time", 0}, \
+        { "threads", 't', "THREADS", 0, "Number of threads for the parallel computation", 0 }, \
+        {0} \
+    };
+
+#define ARG_OPTIONS struct argp_option options[] = \
+    { \
+        {"size", 'd', "SIZE", 0, "Dataset size option (SMALL, MEDIUM, LARGE) - defines the number of iterations for the computation", 0}, \
+        {"seed", 's', "SEED", 0, "Seed for the array initialization", 0}, \
+        {"print-result", 'p', NULL, 0, "If present, will print the result of the computation; if not, will print execution time", 0}, \
+        {0} \
+    };
 
 /* Enumeration for the dataset size available options */
 enum dataset_size {
@@ -57,6 +79,7 @@ struct arguments {
     enum dataset_size size;
     int threads;
     int seed;
+    int print_result;
 };
 
 /* The options to be understood. Must be defined on each program. */
