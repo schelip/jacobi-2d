@@ -2,7 +2,7 @@
 #define JACOBI_2D_H
 
 /* Dataset sizes. */
-#define N 1000
+#define N 20
 #define SMALL_DATASET 120
 #define MEDIUM_DATASET 240
 #define LARGE_DATASET 480
@@ -15,8 +15,8 @@
 
 /* Debug config. */
 #define DEBUG 0
-#define DEBUG_THREAD -1
-#define DEBUG_RANK -1
+#define DEBUG_THREAD 0
+#define DEBUG_RANK 3
 
 
 /* Grid macros and functions. */
@@ -66,6 +66,20 @@ extern float time_diff(struct timeval *start, struct timeval *end);
         {"print-result", 'p', NULL, 0, "If present, will print the result of the computation; if not, will print execution time", 0}, \
         {0} \
     };
+
+#define VERIFY_NUM_PROCESSES if (num_workers > N - 2) \
+    { \
+        if (rank == 0) \
+            printf("Error: number of processes cannot be greater than the dimension of the matrix (not counting borders)\n"); \
+        MPI_Finalize(); \
+        exit(EXIT_FAILURE); \
+    }
+
+#define VERIFY_NUM_THREADS if (num_threads > N - 2) \
+    { \
+        printf("Error: number of threads cannot be greater than the dimension of the matrix (not counting borders)\n"); \
+        exit(EXIT_FAILURE); \
+    }
 
 /* Enumeration for the dataset size available options */
 enum dataset_size {

@@ -10,7 +10,9 @@
 
 ARG_OPTIONS
 
-static int rank, tsteps, num_workers, chunk_size, start_row, end_row;
+static int rank, tsteps, num_workers, chunk_size,
+    start_row, end_row, extra_rows;
+static MPI_Status status;
 
 DECLARE_GRIDS
 PREPARE_GRIDS
@@ -21,7 +23,6 @@ jacobi_2d_worker_mpi()
 {
     /* Variable declaration. */
     int t, i, j, neigh_above, neigh_below;
-    MPI_Status status;
     
     /* Get chunk limits for worker rank. */
     get_limits(rank, chunk_size, num_workers, &start_row, &end_row);
@@ -29,11 +30,11 @@ jacobi_2d_worker_mpi()
     neigh_above = rank - 1;
     neigh_below = rank == num_workers - 1 ? 0 : rank + 1;
 
-    /* If it is the max rank, it must receive the bottom row. */
+    /* If it is the max rank, it must receive the extra rows. */
     if (!neigh_below && rank)
     {
-        MPI_Recv(&INITIAL_GRID EL(N - 1, 0), N, MPI_DOUBLE, 0, TAG, MPI_COMM_WORLD, &status);
-        memcpy(&AUX_GRID EL(N - 1, 1), &INITIAL_GRID EL(N - 1, 1), sizeof(double) * (N - 2));
+        MPI_Recv(&INITIAL_GRID EL(N - extra_rows, 0), N * extra_rows, MPI_DOUBLE, 0, TAG, MPI_COMM_WORLD, &status);
+        memcpy(&AUX_GRID EL(N - extra_rows, 0), &INITIAL_GRID EL(N - extra_rows, 0), sizeof(double) * N * extra_rows);
     }
 
     /* Receive initial chunk values from root. */
@@ -87,6 +88,10 @@ jacobi_2d_worker_mpi()
             &RESULT_GRID EL(start_row, 0), chunk_size * N, MPI_DOUBLE,
             &RESULT_GRID EL(start_row, 0), chunk_size * N, MPI_DOUBLE,
             0, MPI_COMM_WORLD);
+
+    /* If it is the max rank, it must send the extra rows. */
+    if (!neigh_below && rank)
+        MPI_Send(&RESULT_GRID EL(N - extra_rows, 0), N * (extra_rows - 1), MPI_DOUBLE, 0, TAG, MPI_COMM_WORLD);
 }
 
 /* Coordinator function. Initializes array, then share work between workers and also do work itself. */
@@ -99,11 +104,15 @@ jacobi_2d_coordinator_mpi()
     if (DEBUG)
         print_grid(INITIAL_GRID);
 
-    /* Send bottom row to max rank worker .*/
+    /* Send extra rows and bottom row to max rank worker .*/
     if (num_workers)
-        MPI_Send(&INITIAL_GRID EL(N - 1, 0), N, MPI_DOUBLE, num_workers - 1, TAG, MPI_COMM_WORLD);
+        MPI_Send(&INITIAL_GRID EL(N - extra_rows, 0), N * extra_rows, MPI_DOUBLE, num_workers - 1, TAG, MPI_COMM_WORLD);
 
     jacobi_2d_worker_mpi(0);
+
+    /* Receive extra rows from max rank worker .*/
+    if (num_workers)
+        MPI_Recv(&RESULT_GRID EL(N - extra_rows, 0), N * (extra_rows - 1), MPI_DOUBLE, num_workers - 1, TAG, MPI_COMM_WORLD, &status);
 
     if (DEBUG)
         print_grid(RESULT_GRID);
@@ -121,6 +130,7 @@ main(int argc, char *argv[])
     MPI_Comm_size(MPI_COMM_WORLD, &num_workers);
     
     chunk_size = (N - 2) / num_workers;
+    extra_rows = ((N - 2) % num_workers) + 1;
 
     if (rank == 0)
     {
@@ -128,6 +138,8 @@ main(int argc, char *argv[])
         tsteps = arguments.size;
         srand(arguments.seed);
     }
+
+    VERIFY_NUM_PROCESSES
     
     /* Syncronize parameters read by root. */
     MPI_Bcast(&tsteps, 1, MPI_INT, 0, MPI_COMM_WORLD);

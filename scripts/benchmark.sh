@@ -7,7 +7,7 @@ output_file="out/perf_results.csv"
 rm "$output_file"
 echo "PROGRAM,DATASET,N,CPU_CLOCK,TASK_CLOCK,CONTEXT_SWITCHES,CPU_MIGRATIONS,PAGE_FAULTS,BRANCHES,BRANCH_MISSES,CACHE_REFERENCES,CACHE_MISSES,CYCLES,INSTRUCTIONS" >> "$output_file"
 
-# Define the executable programs and dataset sizes
+# Define the dataset sizes and amount of threads
 datasets=("SMALL")
 ns=(2 4 8 16)
 

@@ -17,7 +17,8 @@ static pthread_barrier_t sync_barrier;
 static int syncs_counter = 0;
 
 static int rank, tsteps, num_workers, num_threads,
-    chunk_size, strip_size, start_row, end_row;
+    chunk_size, strip_size, start_row, end_row, extra_rows;
+static MPI_Status status;
 
 DECLARE_GRIDS
 PREPARE_GRIDS
@@ -62,7 +63,6 @@ jacobi_2d_worker_mpi()
     /* Variable declaration. */
     int t, i, *thread_id, neigh_above, neigh_below;
     pthread_t *threads;
-    MPI_Status status;
 
     /* Get chunk limits for worker rank. */
     get_limits(rank, chunk_size, num_workers, &start_row, &end_row);
@@ -70,11 +70,11 @@ jacobi_2d_worker_mpi()
     neigh_above = rank - 1;
     neigh_below = rank == num_workers - 1 ? 0 : rank + 1;
 
-    /* If it is the max rank, it must receive the bottom row. */
+    /* If it is the max rank, it must receive the extra rows and the bottom external row. */
     if (!neigh_below && rank)
     {
-        MPI_Recv(&INITIAL_GRID EL(N - 1, 0), N, MPI_DOUBLE, 0, TAG, MPI_COMM_WORLD, &status);
-        memcpy(&AUX_GRID EL(N - 1, 1), &INITIAL_GRID EL(N - 1, 1), sizeof(double) * (N - 2));
+        MPI_Recv(&INITIAL_GRID EL(N - extra_rows, 0), N * extra_rows, MPI_DOUBLE, 0, TAG, MPI_COMM_WORLD, &status);
+        memcpy(&AUX_GRID EL(N - extra_rows, 0), &INITIAL_GRID EL(N - extra_rows, 0), sizeof(double) * N * extra_rows);
     }
 
     /* Receive initial chunk values from root. */
@@ -172,6 +172,10 @@ jacobi_2d_worker_mpi()
             &RESULT_GRID EL(start_row, 0), chunk_size * N, MPI_DOUBLE,
             &RESULT_GRID EL(start_row, 0), chunk_size * N, MPI_DOUBLE,
             0, MPI_COMM_WORLD);
+
+    /* If it is the max rank, it must send the extra rows. */
+    if (!neigh_below && rank)
+        MPI_Send(&RESULT_GRID EL(N - extra_rows, 0), N * (extra_rows - 1), MPI_DOUBLE, 0, TAG, MPI_COMM_WORLD);
 }
 
 /* Coordinator function. Initializes array, then share work between workers and also do work itself. */
@@ -180,15 +184,16 @@ jacobi_2d_coordinator_mpi()
 {
     /* Initialize array(s). */
     init_grid_with_copy(INITIAL_GRID, AUX_GRID);
-        
-    if (DEBUG)
-        print_grid(INITIAL_GRID);
 
-    /* Send bottom row to max rank worker.*/
+    /* Send extra rows and bottom row to max rank worker .*/
     if (num_workers)
-        MPI_Send(&INITIAL_GRID EL(N - 1, 0), N, MPI_DOUBLE, num_workers - 1, TAG, MPI_COMM_WORLD);
+        MPI_Send(&INITIAL_GRID EL(N - extra_rows, 0), N * extra_rows, MPI_DOUBLE, num_workers - 1, TAG, MPI_COMM_WORLD);
 
     jacobi_2d_worker_mpi(0);
+
+    /* Receive extra rows from max rank worker .*/
+    if (num_workers)
+        MPI_Recv(&RESULT_GRID EL(N - extra_rows, 0), N * (extra_rows - 1), MPI_DOUBLE, num_workers - 1, TAG, MPI_COMM_WORLD, &status);
 
     if (DEBUG)
         print_grid(RESULT_GRID);
@@ -211,10 +216,11 @@ main(int argc, char *argv[])
 
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &num_workers);
-    
-    chunk_size = (N - 2) / num_workers;
 
-    if (!rank)
+    chunk_size = (N - 2) / num_workers;
+    extra_rows = ((N - 2) % num_workers) + 1;
+
+    if (rank == 0)
     {
         parse_args(argc, argv, &arguments);
         tsteps = arguments.size;
@@ -222,13 +228,16 @@ main(int argc, char *argv[])
         srand(arguments.seed);
         strip_size = (N - 2) / num_threads;
     }
+
+    VERIFY_NUM_PROCESSES
+    VERIFY_NUM_THREADS
     
     /* Syncronize parameters read by root. */
     MPI_Bcast(&tsteps, 1, MPI_INT, 0, MPI_COMM_WORLD);
     MPI_Bcast(&num_threads, 1, MPI_INT, 0, MPI_COMM_WORLD);
     MPI_Bcast(&strip_size, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
-    if (!rank)
+    if (rank == 0)
         jacobi_2d_coordinator_mpi();
     else
         jacobi_2d_worker_mpi();

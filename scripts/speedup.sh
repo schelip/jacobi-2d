@@ -7,7 +7,7 @@ output_file="out/speedup_results.csv"
 rm "$output_file"
 echo "PROGRAM,DATASET,N,PARALLEL_TIME,SPEEDUP" >> "$output_file"
 
-# Define the executable programs and dataset sizes
+# Define the dataset sizes and amount of threads
 datasets=("SMALL" )
 ns=(2 4 8 16)
 

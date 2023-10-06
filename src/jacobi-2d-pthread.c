@@ -114,6 +114,8 @@ main(int argc, char *argv[])
     num_threads = arguments.threads;
     srand(arguments.seed);
 
+    VERIFY_NUM_THREADS
+
     jacobi_2d_pthread();
 
     STOP_TIMER
