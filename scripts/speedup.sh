@@ -3,16 +3,16 @@
 make clean
 make
 
-output_file="out/speedup_results.csv"
+output_file="out/speedup_results_2.csv"
 rm "$output_file"
-echo "PROGRAM,DATASET,N,PARALLEL_TIME,SPEEDUP" >> "$output_file"
+echo "PROGRAM,DATASET,N,AVERAGE_TIME,SPEEDUP" >> "$output_file"
 
 # Define the dataset sizes and amount of threads
-datasets=("SMALL" )
+datasets=("SMALL" "MEDIUM" "LARGE")
 ns=(2 4 8 16)
 
 # Define the number of repetitions
-repetitions=2
+repetitions=10
 
 # Declare an associative array to store serial execution times for each dataset
 declare -A serial_times

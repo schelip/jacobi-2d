@@ -2,10 +2,10 @@
 #define JACOBI_2D_H
 
 /* Dataset sizes. */
-#define N 20
-#define SMALL_DATASET 120
-#define MEDIUM_DATASET 240
-#define LARGE_DATASET 480
+#define N 10000
+#define SMALL_DATASET 250
+#define MEDIUM_DATASET 500
+#define LARGE_DATASET 1000
 
 
 /* Constants. */

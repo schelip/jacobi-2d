@@ -30,7 +30,7 @@ jacobi_2d_worker_mpi()
     neigh_above = rank - 1;
     neigh_below = rank == num_workers - 1 ? 0 : rank + 1;
 
-    /* If it is the max rank, it must receive the extra rows. */
+    /* If it is the max rank, it must receive the extra rows and the bottom external row. */
     if (!neigh_below && rank)
     {
         MPI_Recv(&INITIAL_GRID EL(N - extra_rows, 0), N * extra_rows, MPI_DOUBLE, 0, TAG, MPI_COMM_WORLD, &status);
