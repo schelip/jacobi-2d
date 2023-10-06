@@ -1,7 +1,9 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 
-dados = pd.read_csv('speedup_results.csv')
+dados = pd.read_csv('out/speedup_results.csv')
+
+print(dados)
 
 programas = dados['PROGRAM'].unique()
 
@@ -13,11 +15,11 @@ for programa in programas:
     datasets = dados_programa['DATASET'].unique()
     for dataset in datasets:
         dados_dataset = dados_programa[dados_programa['DATASET'] == dataset]
-        threads = dados_dataset['THREADS']
+        n = dados_dataset['N']
         speedup = dados_dataset['SPEEDUP']
-        plt.plot(threads, speedup, marker='o', label=f'DATASET: {dataset}')
+        plt.plot(n, speedup, marker='o', label=f'{dataset}')
 
-    plt.xlabel('Threads')
+    plt.xlabel('Threads/Processos')
     plt.ylabel('Speedup')
     plt.title(f'Gráfico de Speedup para {programa}')
     plt.legend()

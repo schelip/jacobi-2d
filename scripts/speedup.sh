@@ -12,7 +12,7 @@ datasets=("SMALL" "MEDIUM" "LARGE")
 ns=(2 4 8 16)
 
 # Define the number of repetitions
-repetitions=10
+repetitions=1
 
 # Declare an associative array to store serial execution times for each dataset
 declare -A serial_times
